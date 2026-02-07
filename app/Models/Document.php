@@ -13,10 +13,17 @@ class Document extends Model
 
     protected $fillable = [
         'uuid', 'document_id', 'issuer_id', 'holder_email', 'holder_name',
-        'title', 'document_type', 'file_path', 'file_hash', 'original_filename',
+        'title', 'document_type', 'file_path', 'file_hash', 'hash', 'original_filename',
         'file_size', 'metadata', 'expiry_date', 'blockchain_tx_hash',
         'blockchain_status', 'block_number', 'previous_version_id',
         'is_revoked', 'revoked_at', 'revoked_reason',
+        // New comprehensive fields
+        'document_number', 'document_title', 'document_category', 'document_language',
+        'issued_date', 'effective_from', 'effective_until', 'is_permanent', 'validity_status',
+        'issuer_name', 'issuer_department', 'issuer_country', 'issuer_state', 'issuer_city',
+        'issuer_registration_number', 'issuer_contact_email', 'issuer_website', 'issuer_authorized_signatory',
+        'holder_full_name', 'holder_id_number', 'holder_date_of_birth', 'holder_nationality',
+        'description',
     ];
 
     protected $casts = [
@@ -24,6 +31,11 @@ class Document extends Model
         'expiry_date' => 'datetime',
         'revoked_at' => 'datetime',
         'is_revoked' => 'boolean',
+        'is_permanent' => 'boolean',
+        'issued_date' => 'date',
+        'effective_from' => 'date',
+        'effective_until' => 'date',
+        'holder_date_of_birth' => 'date',
     ];
 
     public function getRouteKeyName(): string
