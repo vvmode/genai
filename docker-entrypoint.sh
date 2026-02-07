@@ -9,9 +9,19 @@ if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     sleep 5
 fi
 
+# Check multiple possible variable names for blockchain config
+RPC_URL="${BLOCKCHAIN_RPC_URL:-${SEPOLIA_RPC_URL}}"
+PRIVATE_KEY="${BLOCKCHAIN_WALLET_PRIVATE_KEY:-${PRIVATE_KEY}}"
+CONTRACT_ADDR="${DOCUMENT_REGISTRY_CONTRACT_ADDRESS}"
+
+echo "🔍 Checking blockchain configuration..."
+echo "   RPC URL: ${RPC_URL:0:40}..."
+echo "   Private Key: ${PRIVATE_KEY:0:10}..."
+echo "   Contract Address: ${CONTRACT_ADDR:-Not set}"
+
 # Deploy smart contract if not already deployed
-if [ -n "$BLOCKCHAIN_RPC_URL" ] && [ -n "$BLOCKCHAIN_WALLET_PRIVATE_KEY" ] && [ -z "$DOCUMENT_REGISTRY_CONTRACT_ADDRESS" ]; then
-    echo "📄 Smart contract not deployed yet. Deploying..."
+if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
+    echo "📄 Smart contract not deployed yet. Deploying now..."
     
     # Compile contracts
     echo "⚙️  Compiling smart contracts..."
@@ -27,19 +37,27 @@ if [ -n "$BLOCKCHAIN_RPC_URL" ] && [ -n "$BLOCKCHAIN_WALLET_PRIVATE_KEY" ] && [ 
     
     if [ -n "$CONTRACT_ADDRESS" ]; then
         echo "✅ Contract deployed to: $CONTRACT_ADDRESS"
-        echo "⚠️  Add this to Railway Variables:"
-        echo "   DOCUMENT_REGISTRY_CONTRACT_ADDRESS=$CONTRACT_ADDRESS"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "⚠️  IMPORTANT: Add this to Railway Variables:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "DOCUMENT_REGISTRY_CONTRACT_ADDRESS=$CONTRACT_ADDRESS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
         
         # Save to a file for reference
         echo "$CONTRACT_ADDRESS" > /app/storage/.contract_address
     else
         echo "⚠️  Could not extract contract address from deployment"
+        echo "Check the deployment output above for errors"
     fi
 else
-    if [ -n "$DOCUMENT_REGISTRY_CONTRACT_ADDRESS" ]; then
-        echo "✅ Using existing contract: $DOCUMENT_REGISTRY_CONTRACT_ADDRESS"
+    if [ -n "$CONTRACT_ADDR" ]; then
+        echo "✅ Using existing contract: $CONTRACT_ADDR"
     else
-        echo "⚠️  Blockchain not configured. Set BLOCKCHAIN_RPC_URL and BLOCKCHAIN_WALLET_PRIVATE_KEY"
+        echo "⚠️  Blockchain not fully configured"
+        [ -z "$RPC_URL" ] && echo "   Missing: RPC_URL"
+        [ -z "$PRIVATE_KEY" ] && echo "   Missing: PRIVATE_KEY"
     fi
 fi
 
