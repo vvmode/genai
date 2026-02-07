@@ -15,49 +15,73 @@ PRIVATE_KEY="${BLOCKCHAIN_WALLET_PRIVATE_KEY:-${PRIVATE_KEY}}"
 CONTRACT_ADDR="${DOCUMENT_REGISTRY_CONTRACT_ADDRESS}"
 
 echo "🔍 Checking blockchain configuration..."
-echo "   RPC URL: ${RPC_URL:0:40}..."
-echo "   Private Key: ${PRIVATE_KEY:0:10}..."
-echo "   Contract Address: ${CONTRACT_ADDR:-Not set}"
+if [ -n "$RPC_URL" ]; then
+    echo "   RPC URL: ${RPC_URL:0:50}..."
+else
+    echo "   RPC URL: NOT SET"
+fi
+
+if [ -n "$PRIVATE_KEY" ]; then
+    echo "   Private Key: ${PRIVATE_KEY:0:10}..."
+else
+    echo "   Private Key: NOT SET"
+fi
+
+if [ -n "$CONTRACT_ADDR" ]; then
+    echo "   Contract Address: $CONTRACT_ADDR"
+else
+    echo "   Contract Address: Not set"
+fi
+
+# Export variables for Hardhat
+export BLOCKCHAIN_RPC_URL="$RPC_URL"
+export BLOCKCHAIN_WALLET_PRIVATE_KEY="$PRIVATE_KEY"
 
 # Deploy smart contract if not already deployed
 if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
-    echo "📄 Smart contract not deployed yet. Deploying now..."
+    echo "📄 Attempting smart contract deployment..."
     
     # Compile contracts
     echo "⚙️  Compiling smart contracts..."
-    npx hardhat compile
+    npx hardhat compile || echo "⚠️  Compilation failed"
     
-    # Deploy to network
+    # Deploy to network with timeout and error handling
     echo "🌐 Deploying to Sepolia..."
-    DEPLOYMENT_OUTPUT=$(npx hardhat run scripts/deploy.js --network sepolia 2>&1)
-    echo "$DEPLOYMENT_OUTPUT"
     
-    # Extract contract address from deployment output
-    CONTRACT_ADDRESS=$(echo "$DEPLOYMENT_OUTPUT" | grep -oP "DocumentRegistry deployed to: \K0x[a-fA-F0-9]{40}" | head -1)
-    
-    if [ -n "$CONTRACT_ADDRESS" ]; then
-        echo "✅ Contract deployed to: $CONTRACT_ADDRESS"
-        echo ""
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "⚠️  IMPORTANT: Add this to Railway Variables:"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "DOCUMENT_REGISTRY_CONTRACT_ADDRESS=$CONTRACT_ADDRESS"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo ""
+    if timeout 60 npx hardhat run scripts/deploy.js --network sepolia 2>&1 | tee /tmp/deploy.log; then
+        # Extract contract address from deployment output
+        CONTRACT_ADDRESS=$(grep -oP "DocumentRegistry deployed to: \K0x[a-fA-F0-9]{40}" /tmp/deploy.log | head -1)
         
-        # Save to a file for reference
-        echo "$CONTRACT_ADDRESS" > /app/storage/.contract_address
+        if [ -n "$CONTRACT_ADDRESS" ]; then
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ CONTRACT DEPLOYED SUCCESSFULLY!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Contract Address: $CONTRACT_ADDRESS"
+            echo ""
+            echo "⚠️  Add this to Railway Variables:"
+            echo "DOCUMENT_REGISTRY_CONTRACT_ADDRESS=$CONTRACT_ADDRESS"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            
+            # Save to a file for reference
+            echo "$CONTRACT_ADDRESS" > /app/storage/.contract_address
+        else
+            echo "⚠️  Deployment completed but could not extract contract address"
+            echo "Check deployment logs above"
+        fi
     else
-        echo "⚠️  Could not extract contract address from deployment"
-        echo "Check the deployment output above for errors"
+        echo "❌ Deployment failed or timed out"
+        echo "Continuing without blockchain contract..."
+        echo "You can deploy manually with: npm run deploy:sepolia"
     fi
 else
     if [ -n "$CONTRACT_ADDR" ]; then
         echo "✅ Using existing contract: $CONTRACT_ADDR"
     else
-        echo "⚠️  Blockchain not fully configured"
-        [ -z "$RPC_URL" ] && echo "   Missing: RPC_URL"
-        [ -z "$PRIVATE_KEY" ] && echo "   Missing: PRIVATE_KEY"
+        echo "⚠️  Blockchain not configured - skipping deployment"
+        [ -z "$RPC_URL" ] && echo "   Add SEPOLIA_RPC_URL or BLOCKCHAIN_RPC_URL to Railway"
+        [ -z "$PRIVATE_KEY" ] && echo "   Add PRIVATE_KEY or BLOCKCHAIN_WALLET_PRIVATE_KEY to Railway"
     fi
 fi
 
