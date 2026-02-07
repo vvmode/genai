@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Route;
 // Health Check Routes
 require __DIR__.'/api-health.php';
 
+// Single JSON endpoint for document processing
+Route::post('/document', [App\Http\Controllers\Api\DocumentApiController::class, 'processDocument']);
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
