@@ -1,0 +1,341 @@
+{
+  "info": {
+    "name": "TrustChain Blockchain API",
+    "description": "API collection for TrustChain document verification and blockchain attestation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "key": "auth_token",
+      "value": "YOUR_BEARER_TOKEN_HERE"
+    },
+    {
+      "key": "document_uuid",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Register Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "document",
+                  "type": "file",
+                  "src": "/path/to/your/document.pdf"
+                },
+                {
+                  "key": "holder_name",
+                  "value": "John Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "holder_email",
+                  "value": "john@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Bachelor's Degree Certificate",
+                  "type": "text"
+                },
+                {
+                  "key": "document_type",
+                  "value": "certificate",
+                  "type": "text",
+                  "description": "Options: certificate, experience_letter, transcript, legal_document, other"
+                },
+                {
+                  "key": "expiry_date",
+                  "value": "2025-12-31",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "metadata[institution_name]",
+                  "value": "Massachusetts Institute of Technology",
+                  "type": "text"
+                },
+                {
+                  "key": "metadata[issue_date]",
+                  "value": "2024-05-15",
+                  "type": "text"
+                },
+                {
+                  "key": "metadata[certificate_number]",
+                  "value": "CERT-2024-12345",
+                  "type": "text"
+                },
+                {
+                  "key": "metadata[course_name]",
+                  "value": "Computer Science",
+                  "type": "text"
+                },
+                {
+                  "key": "metadata[grade]",
+                  "value": "First Class Honours",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/documents",
+              "host": ["{{base_url}}"],
+              "path": ["documents"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Document by File Upload",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "document",
+                  "type": "file",
+                  "src": "/path/to/your/document.pdf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/verify",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "verify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Document by Document ID",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_id\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/verify",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "verify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Document by Verification Code",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verification_code\": \"550e8400-e29b-41d4-a716-446655440000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/verify",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "verify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Document Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_uuid}}",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_uuid}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents",
+              "host": ["{{base_url}}"],
+              "path": ["documents"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Information correction required - student name misspelled\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_uuid}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_uuid}}", "revoke"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Transaction Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_uuid}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_uuid}}", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Blockchain Info",
+      "item": [
+        {
+          "name": "Get Wallet Balance",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blockchain/balance?address=0x0000000000000000000000000000000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["blockchain", "balance"],
+              "query": [
+                {
+                  "key": "address",
+                  "value": "0x0000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Gas Price",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blockchain/gas-price",
+              "host": ["{{base_url}}"],
+              "path": ["blockchain", "gas-price"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get ETH Price",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blockchain/eth-price",
+              "host": ["{{base_url}}"],
+              "path": ["blockchain", "eth-price"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blockchain/tx/0xabcdef123456...",
+              "host": ["{{base_url}}"],
+              "path": ["blockchain", "tx", "0xabcdef123456..."]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Block",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blockchain/block/12345678",
+              "host": ["{{base_url}}"],
+              "path": ["blockchain", "block", "12345678"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

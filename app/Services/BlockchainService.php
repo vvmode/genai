@@ -1,0 +1,376 @@
+<?php
+
+namespace App\Services;
+
+use Exception;
+use Illuminate\Support\Facades\Log;
+use Web3\Web3;
+use Web3\Contract;
+use Web3\Utils;
+use phpseclib3\Math\BigInteger;
+
+class BlockchainService
+{
+    private Web3 $web3;
+    private string $walletAddress;
+    private string $privateKey;
+    private array $contractConfig;
+
+    public function __construct()
+    {
+        $rpcUrl = config('blockchain.network.rpc_url');
+        if (empty($rpcUrl)) {
+            throw new Exception('Blockchain RPC URL not configured');
+        }
+
+        $this->web3 = new Web3($rpcUrl);
+        $this->walletAddress = config('blockchain.wallet.address');
+        $this->privateKey = config('blockchain.wallet.private_key');
+        $this->contractConfig = config('blockchain.contracts.document_registry');
+    }
+
+    /**
+     * Register a document on the blockchain
+     *
+     * @param string $documentId Unique document identifier (32 bytes hex)
+     * @param string $documentHash SHA-256 hash of the document
+     * @param string $documentType Type of document (certificate, experience_letter, etc.)
+     * @param int|null $expiryTimestamp Optional expiry timestamp
+     * @param array $metadata Additional metadata
+     * @return array Transaction details
+     */
+    public function registerDocument(
+        string $documentId,
+        string $documentHash,
+        string $documentType,
+        ?int $expiryTimestamp = null,
+        array $metadata = []
+    ): array {
+        try {
+            // Validate inputs
+            $this->validateDocumentId($documentId);
+            $this->validateHash($documentHash);
+
+            // Load contract ABI
+            $abi = $this->loadContractABI($this->contractConfig['abi_path']);
+            $contractAddress = $this->contractConfig['address'];
+
+            if (empty($contractAddress)) {
+                throw new Exception('Document Registry contract address not configured');
+            }
+
+            // Prepare contract call
+            $contract = new Contract($this->web3->provider, $abi);
+            
+            // Encode function call
+            $functionData = $contract->at($contractAddress)->getData(
+                'registerDocument',
+                $documentId,
+                $documentHash,
+                $documentType,
+                $expiryTimestamp ?? 0
+            );
+
+            // Get current gas price
+            $gasPrice = $this->getGasPrice();
+
+            // Build and sign transaction
+            $txHash = $this->sendTransaction([
+                'from' => $this->walletAddress,
+                'to' => $contractAddress,
+                'data' => $functionData,
+                'gas' => '0x' . dechex(config('blockchain.gas.limit', 300000)),
+                'gasPrice' => $gasPrice,
+            ]);
+
+            Log::info('Document registered on blockchain', [
+                'document_id' => $documentId,
+                'tx_hash' => $txHash,
+                'contract' => $contractAddress,
+            ]);
+
+            return [
+                'success' => true,
+                'tx_hash' => $txHash,
+                'contract_address' => $contractAddress,
+                'document_id' => $documentId,
+                'status' => 'pending',
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to register document on blockchain', [
+                'error' => $e->getMessage(),
+                'document_id' => $documentId ?? null,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Revoke a document on the blockchain
+     *
+     * @param string $documentId Document identifier
+     * @param string $reason Reason for revocation
+     * @return array Transaction details
+     */
+    public function revokeDocument(string $documentId, string $reason = ''): array
+    {
+        try {
+            $this->validateDocumentId($documentId);
+
+            $abi = $this->loadContractABI($this->contractConfig['abi_path']);
+            $contractAddress = $this->contractConfig['address'];
+
+            $contract = new Contract($this->web3->provider, $abi);
+            
+            $functionData = $contract->at($contractAddress)->getData(
+                'revokeDocument',
+                $documentId
+            );
+
+            $gasPrice = $this->getGasPrice();
+
+            $txHash = $this->sendTransaction([
+                'from' => $this->walletAddress,
+                'to' => $contractAddress,
+                'data' => $functionData,
+                'gas' => '0x' . dechex(config('blockchain.gas.limit', 300000)),
+                'gasPrice' => $gasPrice,
+            ]);
+
+            Log::info('Document revoked on blockchain', [
+                'document_id' => $documentId,
+                'tx_hash' => $txHash,
+                'reason' => $reason,
+            ]);
+
+            return [
+                'success' => true,
+                'tx_hash' => $txHash,
+                'document_id' => $documentId,
+                'status' => 'pending',
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to revoke document on blockchain', [
+                'error' => $e->getMessage(),
+                'document_id' => $documentId,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Verify a document exists on the blockchain
+     *
+     * @param string $documentId Document identifier
+     * @return array Document data from blockchain
+     */
+    public function verifyDocument(string $documentId): array
+    {
+        try {
+            $this->validateDocumentId($documentId);
+
+            $abi = $this->loadContractABI($this->contractConfig['abi_path']);
+            $contractAddress = $this->contractConfig['address'];
+
+            $contract = new Contract($this->web3->provider, $abi);
+            
+            $result = null;
+            $contract->at($contractAddress)->call('getDocument', $documentId, function ($err, $data) use (&$result) {
+                if ($err !== null) {
+                    throw new Exception($err->getMessage());
+                }
+                $result = $data;
+            });
+
+            return [
+                'success' => true,
+                'data' => $result,
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to verify document on blockchain', [
+                'error' => $e->getMessage(),
+                'document_id' => $documentId,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get transaction receipt
+     *
+     * @param string $txHash Transaction hash
+     * @return array|null Receipt data
+     */
+    public function getTransactionReceipt(string $txHash): ?array
+    {
+        try {
+            $receipt = null;
+            $this->web3->eth->getTransactionReceipt($txHash, function ($err, $data) use (&$receipt) {
+                if ($err === null && $data !== null) {
+                    $receipt = $data;
+                }
+            });
+
+            return $receipt;
+
+        } catch (Exception $e) {
+            Log::error('Failed to get transaction receipt', [
+                'error' => $e->getMessage(),
+                'tx_hash' => $txHash,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Get current gas price from network
+     *
+     * @return string Gas price in hex
+     */
+    private function getGasPrice(): string
+    {
+        $gasPrice = null;
+        
+        $this->web3->eth->gasPrice(function ($err, $price) use (&$gasPrice) {
+            if ($err === null) {
+                $gasPrice = $price;
+            }
+        });
+
+        if ($gasPrice === null) {
+            // Fallback to configured gas price
+            $gasPriceGwei = config('blockchain.gas.price_gwei', '20');
+            $gasPrice = Utils::toWei($gasPriceGwei, 'gwei');
+        }
+
+        return '0x' . $gasPrice->toHex();
+    }
+
+    /**
+     * Send a transaction to the blockchain
+     *
+     * @param array $txParams Transaction parameters
+     * @return string Transaction hash
+     */
+    private function sendTransaction(array $txParams): string
+    {
+        // Get nonce
+        $nonce = $this->getNonce($this->walletAddress);
+        $txParams['nonce'] = '0x' . dechex($nonce);
+        $txParams['chainId'] = config('blockchain.network.chain_id');
+
+        // Sign transaction using private key
+        // Note: You'll need ethereum-tx library for proper signing
+        // This is a simplified version
+        
+        $txHash = null;
+        $this->web3->eth->sendTransaction($txParams, function ($err, $hash) use (&$txHash) {
+            if ($err !== null) {
+                throw new Exception('Transaction failed: ' . $err->getMessage());
+            }
+            $txHash = $hash;
+        });
+
+        if (empty($txHash)) {
+            throw new Exception('Failed to send transaction');
+        }
+
+        return $txHash;
+    }
+
+    /**
+     * Get nonce for address
+     *
+     * @param string $address Wallet address
+     * @return int Nonce
+     */
+    private function getNonce(string $address): int
+    {
+        $nonce = 0;
+        
+        $this->web3->eth->getTransactionCount($address, 'pending', function ($err, $count) use (&$nonce) {
+            if ($err === null) {
+                $nonce = hexdec($count->toString());
+            }
+        });
+
+        return $nonce;
+    }
+
+    /**
+     * Load contract ABI from file
+     *
+     * @param string $abiPath Path to ABI JSON file
+     * @return string ABI JSON string
+     */
+    private function loadContractABI(string $abiPath): string
+    {
+        if (!file_exists($abiPath)) {
+            throw new Exception("Contract ABI file not found: {$abiPath}");
+        }
+
+        $content = file_get_contents($abiPath);
+        $json = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid ABI JSON format');
+        }
+
+        return $content;
+    }
+
+    /**
+     * Validate document ID format
+     *
+     * @param string $documentId Document ID
+     * @throws Exception
+     */
+    private function validateDocumentId(string $documentId): void
+    {
+        if (!preg_match('/^0x[a-fA-F0-9]{64}$/', $documentId)) {
+            throw new Exception('Invalid document ID format. Must be 32 bytes hex string with 0x prefix');
+        }
+    }
+
+    /**
+     * Validate hash format
+     *
+     * @param string $hash Hash string
+     * @throws Exception
+     */
+    private function validateHash(string $hash): void
+    {
+        if (!preg_match('/^(0x)?[a-fA-F0-9]{64}$/', $hash)) {
+            throw new Exception('Invalid hash format. Must be 64 character hex string');
+        }
+    }
+
+    /**
+     * Generate document ID from hash
+     *
+     * @param string $hash Document hash
+     * @return string Document ID (32 bytes hex with 0x prefix)
+     */
+    public static function generateDocumentId(string $hash): string
+    {
+        // Use the hash as document ID or derive it
+        $cleanHash = str_replace('0x', '', $hash);
+        return '0x' . $cleanHash;
+    }
+}

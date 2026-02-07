@@ -6,11 +6,12 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libgmp-dev \
     zip \
     unzip \
     sqlite3 \
     libsqlite3-dev \
-    && docker-php-ext-install pdo pdo_sqlite mbstring xml bcmath \
+    && docker-php-ext-install pdo pdo_sqlite mbstring xml bcmath gmp \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
