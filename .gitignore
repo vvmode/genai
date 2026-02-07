@@ -17,3 +17,24 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Hardhat files
+/cache
+/artifacts
+/deployments
+/node_modules/.cache
+
+# TypeChain
+/typechain
+/typechain-types
+
+# Hardhat Ignition default folder
+ignition/deployments
+
+# Coverage
+coverage
+coverage.json
+*.lcov
+
+# Logs
+*.log

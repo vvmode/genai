@@ -5,6 +5,9 @@ use App\Http\Controllers\Api\DocumentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Health Check Routes
+require __DIR__.'/api-health.php';
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
