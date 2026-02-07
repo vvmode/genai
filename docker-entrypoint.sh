@@ -3,6 +3,12 @@ set -e
 
 echo "🚀 Starting TrustChain Deployment..."
 
+# DEBUG: Print all environment variables related to blockchain
+echo "🔍 DEBUG: Environment Variables"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+env | grep -i "blockchain\|sepolia\|private" || echo "No blockchain vars found"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
 # Wait for database to be ready (if using PostgreSQL/MySQL)
 if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "⏳ Waiting for database connection..."
