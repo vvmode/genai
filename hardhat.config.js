@@ -15,9 +15,9 @@ export default {
   networks: {
     // Sepolia Testnet
     sepolia: {
-      url: process.env.BLOCKCHAIN_RPC_URL || "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
-      accounts: process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY 
-        ? [process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY]
+      url: process.env.BLOCKCHAIN_RPC_URL || process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
+      accounts: process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY || process.env.PRIVATE_KEY
+        ? [process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY || process.env.PRIVATE_KEY]
         : [],
       chainId: 11155111
     },
