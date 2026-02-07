@@ -1,5 +1,24 @@
 import "@nomicfoundation/hardhat-toolbox";
-import "dotenv/config";
+
+// Load from .env file if it exists (local development)
+try {
+  await import("dotenv/config");
+} catch (e) {
+  // Railway injects variables directly, no .env needed
+}
+
+// Get RPC URL from environment with proper fallbacks
+const getRpcUrl = () => {
+  return process.env.BLOCKCHAIN_RPC_URL || 
+         process.env.SEPOLIA_RPC_URL || 
+         "https://ethereum-sepolia-rpc.publicnode.com";
+};
+
+// Get private key from environment
+const getPrivateKey = () => {
+  const key = process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY || process.env.PRIVATE_KEY;
+  return key ? [key] : [];
+};
 
 /** @type import('hardhat/config').HardhatUserConfig */
 export default {
@@ -15,11 +34,10 @@ export default {
   networks: {
     // Sepolia Testnet
     sepolia: {
-      url: process.env.BLOCKCHAIN_RPC_URL || process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
-      accounts: process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY || process.env.PRIVATE_KEY
-        ? [process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY || process.env.PRIVATE_KEY]
-        : [],
-      chainId: 11155111
+      url: getRpcUrl(),
+      accounts: getPrivateKey(),
+      chainId: 11155111,
+      timeout: 60000 // 60 second timeout
     },
     // Polygon Mumbai Testnet
     mumbai: {
