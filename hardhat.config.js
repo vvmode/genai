@@ -1,23 +1,33 @@
 import "@nomicfoundation/hardhat-toolbox";
 
-// Load from .env file if it exists (local development)
-try {
-  await import("dotenv/config");
-} catch (e) {
-  // Railway injects variables directly, no .env needed
-}
+// Railway injects environment variables directly
+// No need for dotenv in production
 
 // Get RPC URL from environment with proper fallbacks
 const getRpcUrl = () => {
-  return process.env.BLOCKCHAIN_RPC_URL || 
-         process.env.SEPOLIA_RPC_URL || 
-         "https://ethereum-sepolia-rpc.publicnode.com";
+  const url = process.env.BLOCKCHAIN_RPC_URL || 
+              process.env.SEPOLIA_RPC_URL;
+  
+  if (!url) {
+    console.log("⚠️  No RPC URL found in environment variables");
+    return "https://ethereum-sepolia-rpc.publicnode.com";
+  }
+  
+  console.log(`✅ Using RPC URL: ${url.substring(0, 50)}...`);
+  return url;
 };
 
 // Get private key from environment
 const getPrivateKey = () => {
   const key = process.env.BLOCKCHAIN_WALLET_PRIVATE_KEY || process.env.PRIVATE_KEY;
-  return key ? [key] : [];
+  
+  if (!key) {
+    console.log("⚠️  No private key found in environment variables");
+    return [];
+  }
+  
+  console.log(`✅ Private key loaded: ${key.substring(0, 10)}...`);
+  return [key];
 };
 
 /** @type import('hardhat/config').HardhatUserConfig */
