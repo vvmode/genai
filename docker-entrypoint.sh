@@ -16,7 +16,14 @@ if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
 fi
 
 # Check multiple possible variable names for blockchain config
-RPC_URL="${BLOCKCHAIN_RPC_URL:-${SEPOLIA_RPC_URL}}"
+# Skip placeholder/invalid values
+RPC_URL=""
+if [ -n "$BLOCKCHAIN_RPC_URL" ] && [[ "$BLOCKCHAIN_RPC_URL" != *"YOUR_INFURA"* ]]; then
+    RPC_URL="$BLOCKCHAIN_RPC_URL"
+elif [ -n "$SEPOLIA_RPC_URL" ] && [[ "$SEPOLIA_RPC_URL" != *"YOUR_INFURA"* ]]; then
+    RPC_URL="$SEPOLIA_RPC_URL"
+fi
+
 PRIVATE_KEY="${BLOCKCHAIN_WALLET_PRIVATE_KEY:-${PRIVATE_KEY}}"
 CONTRACT_ADDR="${DOCUMENT_REGISTRY_CONTRACT_ADDRESS}"
 
