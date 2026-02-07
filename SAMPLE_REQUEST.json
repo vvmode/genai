@@ -1,0 +1,56 @@
+{
+  "action": "register",
+  "document": {
+    "type": "certificate",
+    "number": "CERT-2026-001234",
+    "title": "Bachelor of Science in Computer Science",
+    "category": "academic",
+    "language": "en",
+    "pdf_base64": "JVBERi0xLjQKJeLjz9MKNCAwIG9iago8PC9GaWx0ZXIvRmxhdGVEZWNvZGUvTGVuZ3RoIDU1Pj5zdHJlYW0KeJwr5HIK4TI2U..."
+  },
+  "validity": {
+    "issued_date": "2026-01-15",
+    "effective_from": "2026-01-15",
+    "effective_until": "2030-01-15",
+    "expiry_date": "2030-01-15",
+    "is_permanent": false,
+    "status": "active"
+  },
+  "issuer": {
+    "name": "University of Technology",
+    "department": "Registrar Office",
+    "country": "US",
+    "state": "California",
+    "city": "San Francisco",
+    "registration_number": "UNI-12345",
+    "contact_email": "registrar@university.edu",
+    "website": "https://university.edu",
+    "authorized_signatory": "Dr. John Smith"
+  },
+  "holder": {
+    "full_name": "Jane Doe",
+    "id_number": "STU-98765",
+    "date_of_birth": "2000-05-20",
+    "nationality": "US",
+    "email": "jane.doe@example.com"
+  },
+  "metadata": {
+    "description": "Bachelor degree in Computer Science with honors",
+    "grade": "First Class Honors",
+    "gpa": "3.85",
+    "credits": "120",
+    "specialization": "Artificial Intelligence",
+    "notes": "Graduated with distinction",
+    "custom_fields": {
+      "thesis_title": "Machine Learning Applications in Healthcare",
+      "honors": [
+        "Dean's List",
+        "Best Project Award"
+      ],
+      "additional_certifications": [
+        "AWS Certified Solutions Architect",
+        "Google Cloud Professional"
+      ]
+    }
+  }
+}
