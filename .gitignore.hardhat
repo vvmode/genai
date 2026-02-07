@@ -1,0 +1,24 @@
+# Hardhat files
+node_modules/
+cache/
+artifacts/
+deployments/
+
+# TypeChain
+typechain/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# Hardhat Ignition
+ignition/deployments/
+
+# Environment
+.env
+.env.test
+
+# Misc
+.DS_Store
+*.log
