@@ -23,13 +23,16 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 COPY . .
 
-RUN composer dump-autoload --optimize \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && touch database/database.sqlite \
-    && php artisan migrate --force \
+RUN composer dump-autoload --optimize
+
+# Create SQLite database and set permissions
+RUN touch database/database.sqlite \
     && chown -R www-data:www-data storage bootstrap/cache database
+
+# Copy startup script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8080
 
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+ENTRYPOINT ["docker-entrypoint.sh"]
