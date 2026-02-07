@@ -45,6 +45,12 @@ php artisan serve
 
 Then visit: `http://localhost:8000`
 
+### 🚂 Production Deployment
+
+**Live API:** https://web-production-ef55e.up.railway.app
+
+Deployed on Railway with automatic builds from GitHub.
+
 ## 📦 What's Included
 
 This repository contains:
