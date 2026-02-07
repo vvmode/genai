@@ -7,11 +7,14 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libgmp-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     zip \
     unzip \
     sqlite3 \
     libsqlite3-dev \
-    && docker-php-ext-install pdo pdo_sqlite mbstring xml bcmath gmp \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_sqlite mbstring xml bcmath gmp gd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
