@@ -187,6 +187,12 @@ php artisan view:cache
 echo "🗄️  Running migrations..."
 php artisan migrate --force || echo "⚠️  Migration failed, continuing..."
 
+# Setup fraud detection organizations (if table exists and is empty)
+echo ""
+echo "👥 Setting up fraud detection organizations..."
+php create-test-org.php 2>&1 || echo "⚠️  Organizations may already exist or table not ready"
+echo ""
+
 echo "🎉 Startup complete! Starting server..."
 
 # Start the server
