@@ -38,7 +38,7 @@ Get started in 5 minutes! See [QUICK_START.md](QUICK_START.md) for detailed inst
 composer install
 
 # 2. Configure environment
-cp .env.example.blockchain .env
+cp .env.example .env
 # Edit .env with your blockchain settings
 
 # 3. Run migrations
@@ -49,6 +49,8 @@ php artisan serve
 ```
 
 Then visit: `http://localhost:8000`
+
+**Latest Update (Feb 8, 2026):** Direct blockchain API now live! Send JSON, get permanent blockchain storage.
 
 ### 🚂 Production Deployment
 
