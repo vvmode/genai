@@ -176,6 +176,11 @@ if [ ! -f "storage/app/contracts/DocumentRegistryV2.json" ] && [ -n "$RPC_URL" ]
     fi
 fi
 
+# Generate application key if not set
+echo ""
+echo "🔑 Generating application key..."
+php artisan key:generate --force --no-interaction
+
 # Cache config/routes at runtime when env vars are available
 echo ""
 echo "📦 Caching configuration..."
