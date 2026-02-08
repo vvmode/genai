@@ -278,12 +278,12 @@ class BlockchainService
         // Increase gas price by 50% to ensure transaction goes through
         // This helps avoid "replacement transaction underpriced" errors
         $gasPriceValue = hexdec($gasPrice->toHex());
-        $increasedGasPrice = (int)($gasPriceValue * 1.5);
+        $increasedGasPrice = (int)($gasPriceValue * 2.0);
 
         Log::info('Gas price calculated', [
             'original' => $gasPriceValue,
             'increased' => $increasedGasPrice,
-            'increase_percent' => 50
+            'increase_percent' => 100
         ]);
 
         return '0x' . dechex($increasedGasPrice);
@@ -588,8 +588,8 @@ class BlockchainService
                 'address' => $address
             ]);
             
-            // Wait 3 seconds for pending transactions to clear
-            sleep(3);
+            // Wait 5 seconds for pending transactions to clear
+            sleep(5);
             
             // Get latest nonce again
             $this->web3->eth->getTransactionCount($address, 'latest', function ($err, $count) use (&$latestNonce) {
@@ -599,8 +599,8 @@ class BlockchainService
             });
         }
 
-        // Add small random delay to prevent concurrent requests
-        usleep(rand(100000, 200000)); // 100-200ms
+        // Add random delay to prevent concurrent requests
+        usleep(rand(200000, 500000)); // 200-500ms
 
         Log::info('Using nonce', ['nonce' => $latestNonce, 'address' => $address]);
         
