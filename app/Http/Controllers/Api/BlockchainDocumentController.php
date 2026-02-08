@@ -87,6 +87,11 @@ class BlockchainDocumentController extends Controller
         if (isset($document['pdf_base64'])) {
             $pdfData = base64_decode($document['pdf_base64']);
             $pdfHash = '0x' . hash('sha256', $pdfData);
+        } else {
+            // If no PDF provided, hash document metadata as placeholder
+            // (contract requires non-zero pdfHash)
+            $hashInput = $document['number'] . $document['title'] . $document['type'];
+            $pdfHash = '0x' . hash('sha256', $hashInput);
         }
 
         // Prepare blockchain data structure

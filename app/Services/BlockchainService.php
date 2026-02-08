@@ -407,6 +407,12 @@ class BlockchainService
             // Pad to 32 bytes (64 hex chars) if needed
             $pdfHashHex = str_pad($pdfHashHex, 64, '0', STR_PAD_RIGHT);
 
+            // If no IPFS hash provided, use document number as placeholder
+            // (contract requires non-empty ipfsHash)
+            $ipfsHashValue = !empty($data['ipfsHash']) 
+                ? $data['ipfsHash'] 
+                : 'QmNone-' . $data['documentNumber'];
+
             // Prepare contract function call with parameters matching contract signature
             // Contract expects: documentId, documentType, documentNumber, documentTitle,
             // issuedDate, effectiveFrom, effectiveUntil, expiryDate, isPermanent,
@@ -430,7 +436,7 @@ class BlockchainService
                 $data['holderFullName'],                    // holderFullName
                 $data['holderIdNumber'] ?: '',              // holderIdNumber
                 $data['holderNationality'] ?: '',           // holderNationality
-                $data['ipfsHash'] ?: '',                    // ipfsHash (empty string if not using IPFS)
+                $ipfsHashValue,                             // ipfsHash (placeholder if not using IPFS)
                 '0x' . $pdfHashHex                          // pdfHash (bytes32)
             );
 
