@@ -14,15 +14,20 @@
 
 TrustChain is a blockchain-powered API for document verification and digital attestation. It eliminates document fraud by storing cryptographic hashes on the blockchain, providing permanent, tamper-proof records of document authenticity.
 
+**NEW:** 🌟 **Hybrid Storage Model (V2)** - Critical metadata on blockchain + Encrypted PDFs on IPFS for cost-effective, fully decentralized document storage.
+
 ### ✨ Key Features
 
 - **🔒 Blockchain Registration** - Store document hashes on Ethereum-compatible networks
+- **☁️ Hybrid Storage (V2)** - Metadata on blockchain + Encrypted PDF on IPFS
+- **🔐 Zero-Knowledge Encryption** - AES-256 encryption with user-managed keys
 - **✅ Public Verification** - Anyone can verify document authenticity
 - **🔄 Document Revocation** - Revoke compromised or incorrect documents
 - **📝 Version Control** - Track document corrections with full history
 - **🔍 Multiple Verification Methods** - Verify by file, document ID, or QR code
 - **⚡ Fast & Secure** - SHA-256 hashing with blockchain immutability
 - **🌐 Multi-network Support** - Sepolia, Polygon, Ethereum mainnet
+- **💾 IPFS Integration** - Decentralized storage via Pinata
 
 ## 🚀 Quick Start
 
@@ -48,6 +53,80 @@ Then visit: `http://localhost:8000`
 ### 🚂 Production Deployment
 
 **Live API:** https://web-production-ef55e.up.railway.app
+
+**API Endpoints:**
+- **🔗 Direct Blockchain:** `/api/blockchain/document` - JSON → Blockchain (Recommended) ⭐
+- **V2 (Hybrid):** `/api/v2/document` - Metadata on blockchain + Encrypted PDF on IPFS
+- **V1 (Basic):** `/api/document` - Local storage + hash on blockchain
+
+📚 **Documentation:**
+- **[Direct Blockchain API](DIRECT_BLOCKCHAIN_API.md)** - Simple JSON to blockchain storage ⭐
+- [Hybrid Storage Guide](HYBRID_STORAGE_GUIDE.md) - V2 architecture with IPFS
+- [Deployment Checklist](DEPLOYMENT_CHECKLIST.md) - Deployment guide
+- [API Structure](API_STRUCTURE.md) - Request/response formats
+
+## 🎯 Quick Start: Direct Blockchain
+
+**1. Send JSON:**
+```bash
+curl -X POST https://web-production-ef55e.up.railway.app/api/blockchain/document \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "register",
+    "document": {
+      "type": "certificate",
+      "number": "CERT-2026-001",
+      "title": "My Certificate"
+    },
+    "validity": {
+      "issued_date": "2026-02-08",
+      "expiry_date": "2030-02-08"
+    },
+    "issuer": {
+      "name": "University Name",
+      "country": "US"
+    },
+    "holder": {
+      "full_name": "John Doe"
+    }
+  }'
+```
+
+**2. Get Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "document_id": "CERT-2026-001",
+    "blockchain": {
+      "transaction_hash": "0x123...",
+      "explorer_url": "https://sepolia.etherscan.io/tx/0x123..."
+    }
+  }
+}
+```
+
+**3. Verify:**
+```bash
+curl -X POST https://web-production-ef55e.up.railway.app/api/blockchain/document \
+  -H "Content-Type: application/json" \
+  -d '{"action":"verify","document_id":"CERT-2026-001"}'
+```
+
+All metadata stored permanently on blockchain! 🎉
+
+### � What Gets Stored on Blockchain
+
+✅ Document metadata (type, number, title, category)  
+✅ Validity information (issue/expiry dates)  
+✅ Complete issuer details  
+✅ Complete holder details  
+✅ PDF hash (for verification)  
+✅ Additional custom metadata  
+
+**Cost:** ~$2-5 per document (one-time, permanent)  
+**Storage:** Ethereum blockchain (immutable, public)  
+**Verification:** Anyone can verify authenticity  
 
 Deployed on Railway with automatic builds from GitHub.
 

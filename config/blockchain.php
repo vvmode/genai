@@ -27,6 +27,10 @@ return [
             'address' => env('DOCUMENT_REGISTRY_CONTRACT_ADDRESS', ''),
             'abi_path' => storage_path('app/contracts/DocumentRegistry.json'),
         ],
+        'document_registry_v2' => [
+            'address' => env('DOCUMENT_REGISTRY_V2_ADDRESS', ''),
+            'abi_path' => storage_path('app/contracts/DocumentRegistryV2.json'),
+        ],
     ],
 
     'gas' => [

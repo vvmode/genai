@@ -9,7 +9,14 @@ use Illuminate\Support\Facades\Route;
 require __DIR__.'/api-health.php';
 
 // Single JSON endpoint for document processing
+// V1 (Basic): Local storage + hash on blockchain
 Route::post('/document', [App\Http\Controllers\Api\DocumentApiController::class, 'processDocument']);
+
+// V2 (Hybrid Storage): Metadata on blockchain + Encrypted PDF on IPFS
+Route::post('/v2/document', [App\Http\Controllers\Api\DocumentApiControllerV2::class, 'processDocument']);
+
+// V3 (Direct Blockchain): JSON → Blockchain (All metadata stored on-chain)
+Route::post('/blockchain/document', [App\Http\Controllers\Api\BlockchainDocumentController::class, 'process']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

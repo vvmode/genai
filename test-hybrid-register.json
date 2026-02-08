@@ -1,0 +1,49 @@
+{
+  "action": "register",
+  "document": {
+    "type": "certificate",
+    "number": "TEST-HYBRID-001",
+    "title": "Test Certificate for Hybrid Storage",
+    "category": "education",
+    "subcategory": "degree",
+    "description": "Testing encrypted IPFS + blockchain metadata storage",
+    "language": "en",
+    "version": "1.0",
+    "security_level": "high",
+    "pdf_base64": "JVBERi0xLjQKJeLjz9MKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL1Jlc291cmNlczw8L0ZvbnQ8PC9GMSAzMSAwIFI+Pj4+L01lZGlhQm94WzAgMCA2MTIgNzkyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCjw8L0xlbmd0aCA0Nj4+CnN0cmVhbQpCVAovRjEgMjQgVGYKMTAwIDcwMCBUZAooSGVsbG8gV29ybGQgLSBUZXN0IERvY3VtZW50KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDIgMCBSPj4KZW5kb2JqCjIgMCBvYmoKPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZgowMDAwMDAwMjExIDAwMDAwIG4KMDAwMDAwMDI1OCAwMDAwMCBuCjAwMDAwMDAwMTUgMDAwMDAgbgowMDAwMDAwMTA4IDAwMDAwIG4KdHJhaWxlcgo8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgozMTUKJSVFT0Y="
+  },
+  "validity": {
+    "issued_date": "2026-02-08",
+    "expiry_date": "2030-02-08",
+    "is_permanent": false,
+    "renewable": true,
+    "grace_period_days": 30
+  },
+  "issuer": {
+    "name": "Test University",
+    "country": "US",
+    "state": "California",
+    "city": "San Francisco",
+    "registration_number": "UNI-TEST-123",
+    "contact_email": "issuer@testuniversity.edu",
+    "website": "https://testuniversity.edu",
+    "department": "Computer Science"
+  },
+  "holder": {
+    "full_name": "John Doe",
+    "id_number": "STU-2026-789",
+    "nationality": "US",
+    "date_of_birth": "1995-05-15",
+    "contact_email": "john.doe@example.com"
+  },
+  "metadata": {
+    "degree": "Bachelor of Science",
+    "major": "Computer Science",
+    "minor": "Mathematics",
+    "gpa": "3.85",
+    "honors": "Cum Laude",
+    "credits_earned": "120",
+    "graduation_date": "2026-05-20",
+    "thesis_title": "Blockchain-based Document Verification Systems"
+  }
+}

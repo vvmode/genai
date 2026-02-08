@@ -1,0 +1,49 @@
+{
+  "action": "register",
+  "document": {
+    "type": "certificate",
+    "number": "DIRECT-BLOCKCHAIN-001",
+    "title": "Direct Blockchain Storage Test",
+    "category": "education",
+    "subcategory": "degree",
+    "description": "Testing direct blockchain metadata storage",
+    "language": "en",
+    "version": "1.0",
+    "security_level": "high",
+    "pdf_base64": "JVBERi0xLjQKJeLjz9MKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL1Jlc291cmNlczw8L0ZvbnQ8PC9GMSAzMSAwIFI+Pj4+L01lZGlhQm94WzAgMCA2MTIgNzkyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCjw8L0xlbmd0aCA0Nj4+CnN0cmVhbQpCVAovRjEgMjQgVGYKMTAwIDcwMCBUZAooSGVsbG8gV29ybGQgLSBEaXJlY3QgQmxvY2tjaGFpbiBTdG9yYWdlKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDIgMCBSPj4KZW5kb2JqCjIgMCBvYmoKPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZgowMDAwMDAwMjExIDAwMDAwIG4KMDAwMDAwMDI1OCAwMDAwMCBuCjAwMDAwMDAwMTUgMDAwMDAgbgowMDAwMDAwMTA4IDAwMDAwIG4KdHJhaWxlcgo8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgozMTUKJSVFT0Y="
+  },
+  "validity": {
+    "issued_date": "2026-02-08",
+    "expiry_date": "2030-02-08",
+    "is_permanent": false,
+    "renewable": true,
+    "grace_period_days": 30
+  },
+  "issuer": {
+    "name": "Blockchain University",
+    "country": "US",
+    "state": "California",
+    "city": "San Francisco",
+    "registration_number": "BU-2026-001",
+    "contact_email": "admin@blockchain-u.edu",
+    "website": "https://blockchain-university.edu",
+    "department": "Computer Science"
+  },
+  "holder": {
+    "full_name": "Alice Johnson",
+    "id_number": "STU-BC-2026-789",
+    "nationality": "US",
+    "date_of_birth": "1998-03-20",
+    "contact_email": "alice.j@example.com"
+  },
+  "metadata": {
+    "degree": "Master of Science",
+    "major": "Blockchain Technology",
+    "minor": "Cryptography",
+    "gpa": "3.95",
+    "honors": "Magna Cum Laude",
+    "credits_earned": "45",
+    "graduation_date": "2026-05-25",
+    "thesis_title": "Decentralized Document Verification on Ethereum"
+  }
+}

@@ -373,4 +373,202 @@ class BlockchainService
         $cleanHash = str_replace('0x', '', $hash);
         return '0x' . $cleanHash;
     }
+
+    /**
+     * Register document with comprehensive metadata (V2 contract)
+     *
+     * @param array $data Document data
+     * @return array Transaction details
+     * @throws Exception
+     */
+    public function registerDocumentV2(array $data): array
+    {
+        try {
+            Log::info('Registering document V2 on blockchain', [
+                'document_number' => $data['documentNumber']
+            ]);
+
+            // Load V2 contract configuration
+            $contractConfig = config('blockchain.contracts.document_registry_v2');
+            $contractAddress = $contractConfig['address'];
+            
+            if (empty($contractAddress)) {
+                throw new Exception('Document Registry V2 contract address not configured');
+            }
+
+            $abi = $this->loadContractABI($contractConfig['abi_path']);
+            $contract = new Contract($this->web3->provider, $abi);
+
+            // Prepare contract function call with all metadata
+            $functionData = $contract->at($contractAddress)->getData(
+                'registerDocument',
+                $data['documentType'],
+                $data['documentNumber'],
+                $data['documentTitle'],
+                $data['documentCategory'],
+                $data['documentSubcategory'],
+                $data['documentDescription'],
+                $data['documentLanguage'],
+                $data['documentVersion'],
+                $data['securityLevel'],
+                $data['issuedDate'],
+                $data['expiryDate'],
+                $data['isPermanent'],
+                $data['renewable'],
+                $data['gracePeriodDays'],
+                $data['issuerName'],
+                $data['issuerCountry'],
+                $data['issuerState'],
+                $data['issuerCity'],
+                $data['issuerRegistrationNumber'],
+                $data['issuerContactEmail'],
+                $data['issuerWebsite'],
+                $data['issuerDepartment'],
+                $data['holderFullName'],
+                $data['holderIdNumber'],
+                $data['holderNationality'],
+                $data['holderDateOfBirth'],
+                $data['holderContactEmail'],
+                $data['ipfsHash'],
+                $data['pdfHash'],
+                $data['additionalMetadata']
+            );
+
+            // Get gas price
+            $gasPrice = $this->getGasPrice();
+
+            // Send transaction
+            $txHash = $this->sendTransaction([
+                'from' => $this->walletAddress,
+                'to' => $contractAddress,
+                'data' => $functionData,
+                'gas' => '0x' . dechex(500000), // Higher gas limit for V2 (more data)
+                'gasPrice' => $gasPrice,
+            ]);
+
+            Log::info('Document V2 registered on blockchain', [
+                'document_number' => $data['documentNumber'],
+                'tx_hash' => $txHash,
+                'contract' => $contractAddress
+            ]);
+
+            return [
+                'success' => true,
+                'transaction_hash' => $txHash,
+                'contract_address' => $contractAddress,
+                'status' => 'pending'
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to register document V2', [
+                'error' => $e->getMessage(),
+                'document_number' => $data['documentNumber'] ?? 'unknown'
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get document metadata from blockchain (V2 contract)
+     *
+     * @param string $documentId Document ID
+     * @return array Document metadata
+     * @throws Exception
+     */
+    public function getDocumentMetadata(string $documentId): array
+    {
+        try {
+            Log::info('Retrieving document metadata from blockchain', [
+                'document_id' => $documentId
+            ]);
+
+            // Load V2 contract configuration
+            $contractConfig = config('blockchain.contracts.document_registry_v2');
+            $contractAddress = $contractConfig['address'];
+            
+            if (empty($contractAddress)) {
+                throw new Exception('Document Registry V2 contract address not configured');
+            }
+
+            $abi = $this->loadContractABI($contractConfig['abi_path']);
+            $contract = new Contract($this->web3->provider, $abi);
+
+            // Call getDocument function on contract
+            $result = null;
+            $contract->at($contractAddress)->call('getDocument', $documentId, function ($err, $data) use (&$result) {
+                if ($err !== null) {
+                    throw new Exception($err->getMessage());
+                }
+                $result = $data;
+            });
+
+            // Check if document exists
+            if (empty($result) || empty($result['documentNumber'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Document not found'
+                ];
+            }
+
+            Log::info('Document metadata retrieved', [
+                'document_id' => $documentId,
+                'found' => true
+            ]);
+
+            // Return structured metadata
+            return [
+                'success' => true,
+                'data' => [
+                    'documentType' => $result['documentType'],
+                    'documentNumber' => $result['documentNumber'],
+                    'documentTitle' => $result['documentTitle'],
+                    'documentCategory' => $result['documentCategory'],
+                    'documentSubcategory' => $result['documentSubcategory'],
+                    'documentDescription' => $result['documentDescription'],
+                    'documentLanguage' => $result['documentLanguage'],
+                    'documentVersion' => $result['documentVersion'],
+                    'securityLevel' => $result['securityLevel'],
+                    'issuedDate' => $result['issuedDate'],
+                    'expiryDate' => $result['expiryDate'],
+                    'isPermanent' => $result['isPermanent'],
+                    'renewable' => $result['renewable'],
+                    'gracePeriodDays' => $result['gracePeriodDays'],
+                    'issuerName' => $result['issuerName'],
+                    'issuerCountry' => $result['issuerCountry'],
+                    'issuerState' => $result['issuerState'],
+                    'issuerCity' => $result['issuerCity'],
+                    'issuerRegistrationNumber' => $result['issuerRegistrationNumber'],
+                    'issuerContactEmail' => $result['issuerContactEmail'],
+                    'issuerWebsite' => $result['issuerWebsite'],
+                    'issuerDepartment' => $result['issuerDepartment'],
+                    'holderFullName' => $result['holderFullName'],
+                    'holderIdNumber' => $result['holderIdNumber'],
+                    'holderNationality' => $result['holderNationality'],
+                    'holderDateOfBirth' => $result['holderDateOfBirth'],
+                    'holderContactEmail' => $result['holderContactEmail'],
+                    'ipfsHash' => $result['ipfsHash'],
+                    'pdfHash' => $result['pdfHash'],
+                    'additionalMetadata' => $result['additionalMetadata'],
+                    'revoked' => $result['revoked'],
+                    'registeredAt' => $result['registeredAt']
+                ]
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Failed to get document metadata', [
+                'document_id' => $documentId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
 }
+
