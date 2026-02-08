@@ -290,57 +290,111 @@ class BlockchainService
     }
 
     /**
-     * Send a transaction to the blockchain
+     * Send a transaction to the blockchain with retry logic
      *
      * @param array $txParams Transaction parameters
+     * @param int $maxRetries Maximum number of retry attempts
      * @return string Transaction hash
      */
-    private function sendTransaction(array $txParams): string
+    private function sendTransaction(array $txParams, int $maxRetries = 3): string
     {
-        // Get nonce
-        $nonce = $this->getNonce($this->walletAddress);
-        $chainId = config('blockchain.network.chain_id');
+        $attempt = 0;
+        $lastError = null;
 
-        // Build transaction array for RLP encoding
-        $transaction = [
-            'nonce' => '0x' . dechex($nonce),
-            'gasPrice' => $txParams['gasPrice'],
-            'gas' => $txParams['gas'],
-            'to' => $txParams['to'],
-            'value' => $txParams['value'] ?? '0x0',
-            'data' => $txParams['data'],
-        ];
+        while ($attempt < $maxRetries) {
+            try {
+                $attempt++;
+                
+                // Get fresh nonce for each attempt
+                $nonce = $this->getNonce($this->walletAddress);
+                $chainId = config('blockchain.network.chain_id');
 
-        Log::info('Preparing transaction', [
-            'from' => $this->walletAddress,
-            'to' => $txParams['to'],
-            'nonce' => $nonce,
-            'gas' => $txParams['gas'],
-            'chainId' => $chainId,
-        ]);
+                // Increase gas price on retry attempts
+                $gasPrice = $txParams['gasPrice'];
+                if ($attempt > 1) {
+                    // Increase gas price by 25% for each retry
+                    $gasPriceValue = hexdec($gasPrice);
+                    $multiplier = 1 + (0.25 * ($attempt - 1));
+                    $gasPrice = '0x' . dechex((int)($gasPriceValue * $multiplier));
+                    
+                    Log::info('Retrying transaction with increased gas price', [
+                        'attempt' => $attempt,
+                        'original_gas_price' => $txParams['gasPrice'],
+                        'new_gas_price' => $gasPrice,
+                        'multiplier' => $multiplier
+                    ]);
+                }
 
-        // Sign and send the transaction
-        $signedTx = $this->signTransaction($transaction, $chainId);
+                // Build transaction array for RLP encoding
+                $transaction = [
+                    'nonce' => '0x' . dechex($nonce),
+                    'gasPrice' => $gasPrice,
+                    'gas' => $txParams['gas'],
+                    'to' => $txParams['to'],
+                    'value' => $txParams['value'] ?? '0x0',
+                    'data' => $txParams['data'],
+                ];
 
-        // Send raw signed transaction
-        $txHash = null;
-        $this->web3->eth->sendRawTransaction($signedTx, function ($err, $hash) use (&$txHash) {
-            if ($err !== null) {
-                throw new Exception('Transaction failed: ' . $err->getMessage());
+                Log::info('Preparing transaction', [
+                    'from' => $this->walletAddress,
+                    'to' => $txParams['to'],
+                    'nonce' => $nonce,
+                    'gas' => $txParams['gas'],
+                    'chainId' => $chainId,
+                    'attempt' => $attempt,
+                ]);
+
+                // Sign and send the transaction
+                $signedTx = $this->signTransaction($transaction, $chainId);
+
+                // Send raw signed transaction
+                $txHash = null;
+                $this->web3->eth->sendRawTransaction($signedTx, function ($err, $hash) use (&$txHash) {
+                    if ($err !== null) {
+                        throw new Exception('Transaction failed: ' . $err->getMessage());
+                    }
+                    $txHash = $hash;
+                });
+
+                if (empty($txHash)) {
+                    throw new Exception('Failed to send transaction');
+                }
+
+                Log::info('Transaction sent successfully', ['tx_hash' => $txHash, 'attempt' => $attempt]);
+
+                // Wait for transaction to be mined (prevents nonce conflicts)
+                $this->waitForTransaction($txHash, 15); // Wait up to 15 seconds
+
+                return $txHash;
+
+            } catch (Exception $e) {
+                $lastError = $e;
+                $errorMessage = $e->getMessage();
+
+                // Check if it's a nonce-related error that we should retry
+                if (strpos($errorMessage, 'replacement transaction underpriced') !== false ||
+                    strpos($errorMessage, 'nonce too low') !== false) {
+                    
+                    if ($attempt < $maxRetries) {
+                        $waitTime = 2 * $attempt; // 2, 4 seconds
+                        Log::warning('Transaction failed with nonce/gas issue, retrying...', [
+                            'attempt' => $attempt,
+                            'max_retries' => $maxRetries,
+                            'error' => $errorMessage,
+                            'wait_seconds' => $waitTime
+                        ]);
+                        sleep($waitTime); // Wait before retry
+                        continue; // Retry the loop
+                    }
+                }
+
+                // If it's not a retry-able error, or max retries reached, throw immediately
+                throw $e;
             }
-            $txHash = $hash;
-        });
-
-        if (empty($txHash)) {
-            throw new Exception('Failed to send transaction');
         }
 
-        Log::info('Transaction sent successfully', ['tx_hash' => $txHash]);
-
-        // Wait for transaction to be mined (prevents nonce conflicts)
-        $this->waitForTransaction($txHash, 15); // Wait up to 15 seconds
-
-        return $txHash;
+        // If we exhausted all retries, throw the last error
+        throw $lastError;
     }
 
     /**
