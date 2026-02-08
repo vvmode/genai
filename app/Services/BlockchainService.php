@@ -335,7 +335,58 @@ class BlockchainService
             throw new Exception('Failed to send transaction');
         }
 
+        Log::info('Transaction sent successfully', ['tx_hash' => $txHash]);
+
+        // Wait for transaction to be mined (prevents nonce conflicts)
+        $this->waitForTransaction($txHash, 15); // Wait up to 15 seconds
+
         return $txHash;
+    }
+
+    /**
+     * Wait for transaction to be mined
+     *
+     * @param string $txHash Transaction hash
+     * @param int $maxWaitSeconds Maximum seconds to wait
+     * @return void
+     */
+    private function waitForTransaction(string $txHash, int $maxWaitSeconds = 15): void
+    {
+        $startTime = time();
+        $mined = false;
+
+        Log::info('Waiting for transaction to be mined', ['tx_hash' => $txHash]);
+
+        while ((time() - $startTime) < $maxWaitSeconds && !$mined) {
+            $receipt = null;
+            
+            $this->web3->eth->getTransactionReceipt($txHash, function ($err, $result) use (&$receipt) {
+                if ($err === null && $result !== null) {
+                    $receipt = $result;
+                }
+            });
+
+            if ($receipt !== null) {
+                $mined = true;
+                Log::info('Transaction mined', [
+                    'tx_hash' => $txHash,
+                    'block_number' => $receipt->blockNumber ?? 'unknown',
+                    'status' => $receipt->status ?? 'unknown'
+                ]);
+                break;
+            }
+
+            // Wait 2 seconds before checking again
+            sleep(2);
+        }
+
+        if (!$mined) {
+            Log::warning('Transaction not mined within timeout', [
+                'tx_hash' => $txHash,
+                'timeout' => $maxWaitSeconds
+            ]);
+            // Don't throw error - transaction is still valid, just not confirmed yet
+        }
     }
 
     /**
