@@ -176,10 +176,13 @@ if [ ! -f "storage/app/contracts/DocumentRegistryV2.json" ] && [ -n "$RPC_URL" ]
     fi
 fi
 
-# Generate application key if not set
-echo ""
-echo "🔑 Generating application key..."
-php artisan key:generate --force --no-interaction
+# Generate application key if not set (Railway uses env vars, not .env file)
+if [ -z "$APP_KEY" ]; then
+    echo ""
+    echo "🔑 Generating application key..."
+    export APP_KEY="base64:$(openssl rand -base64 32)"
+    echo "✅ Application key generated"
+fi
 
 # Cache config/routes at runtime when env vars are available
 echo ""
