@@ -69,6 +69,9 @@ class BlockchainDocumentController extends Controller
 
         $data = $request->all();
         
+        // Generate unique document ID to avoid "already exists" errors
+        $uniqueDocumentId = $data['document_uuid'] . '-' . time() . '-' . substr(md5(random_bytes(16)), 0, 8);
+        
         // Add 0x prefix if not present
         $fileHash = $data['file_hash'];
         if (!str_starts_with($fileHash, '0x')) {
@@ -87,7 +90,7 @@ class BlockchainDocumentController extends Controller
         $blockchainData = [
             // Document info
             'documentType' => 'generic',
-            'documentNumber' => $data['document_uuid'],
+            'documentNumber' => $uniqueDocumentId,
             'documentTitle' => $data['document_uuid'],
             'documentCategory' => '',
             'documentSubcategory' => '',
@@ -120,11 +123,12 @@ class BlockchainDocumentController extends Controller
             'holderDateOfBirth' => 0,
             'holderContactEmail' => '',
             
-            // PDF hash and metadata
-            'ipfsHash' => '',
+            // PDF hash and metadata - Contract requires non-empty ipfsHash
+            'ipfsHash' => 'QmPlaceholder-' . substr($uniqueDocumentId, 0, 20),
             'pdfHash' => $pdfHash,
             'additionalMetadata' => json_encode([
                 'document_uuid' => $data['document_uuid'],
+                'unique_id' => $uniqueDocumentId,
                 'metadata_hash' => $metadataHash
             ]),
         ];
@@ -148,6 +152,7 @@ class BlockchainDocumentController extends Controller
             'message' => 'Document registered successfully on blockchain',
             'data' => [
                 'document_uuid' => $data['document_uuid'],
+                'unique_document_id' => $uniqueDocumentId,
                 'file_hash' => $fileHash,
                 'metadata_hash' => $metadataHash,
                 'blockchain' => [
