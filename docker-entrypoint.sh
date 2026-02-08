@@ -146,7 +146,38 @@ else
     fi
 fi
 
+# Ensure ABI files are available for Laravel
+echo ""
+echo "📄 Setting up contract ABI files..."
+
+# Create contracts directory if it doesn't exist
+mkdir -p storage/app/contracts
+
+# Copy ABI files if they exist (from compilation)
+if [ -f "artifacts/contracts/DocumentRegistry.sol/DocumentRegistry.json" ]; then
+    cp artifacts/contracts/DocumentRegistry.sol/DocumentRegistry.json storage/app/contracts/
+    echo "✅ Copied DocumentRegistry ABI"
+fi
+
+if [ -f "artifacts/contracts/DocumentRegistryV2.sol/DocumentRegistryV2.json" ]; then
+    cp artifacts/contracts/DocumentRegistryV2.sol/DocumentRegistryV2.json storage/app/contracts/
+    echo "✅ Copied DocumentRegistryV2 ABI"
+fi
+
+# If ABI files don't exist yet, compile contracts to generate them
+if [ ! -f "storage/app/contracts/DocumentRegistryV2.json" ] && [ -n "$RPC_URL" ]; then
+    echo "⚙️  Compiling contracts to generate ABI files..."
+    npx hardhat compile || echo "⚠️  Compilation failed"
+    
+    # Try copying again after compilation
+    if [ -f "artifacts/contracts/DocumentRegistryV2.sol/DocumentRegistryV2.json" ]; then
+        cp artifacts/contracts/DocumentRegistryV2.sol/DocumentRegistryV2.json storage/app/contracts/
+        echo "✅ Copied DocumentRegistryV2 ABI after compilation"
+    fi
+fi
+
 # Cache config/routes at runtime when env vars are available
+echo ""
 echo "📦 Caching configuration..."
 php artisan config:cache
 php artisan route:cache
