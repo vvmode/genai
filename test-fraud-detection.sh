@@ -6,6 +6,9 @@
 BASE_URL="https://web-production-ef55e.up.railway.app/api"
 # BASE_URL="http://localhost:8000/api"  # Uncomment for local testing
 
+# IMPORTANT: Replace with your actual API key from database
+API_KEY="${1:-}"
+
 # Color codes for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -17,40 +20,81 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Certificate Fraud Detection API Test${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
-# Test 1: Verify API key (should fail without key)
-echo -e "${YELLOW}Test 1: Verify API Key (No Key)${NC}"
-curl -X GET "$BASE_URL/fraud-detection/verify-key" \
+# Check if API key is provided
+if [ -z "$API_KEY" ]; then
+    echo -e "${RED}ERROR: API Key required!${NC}\n"
+    echo -e "Usage: ./test-fraud-detection.sh YOUR_API_KEY\n"
+    echo -e "Get API key by running on Railway terminal:"
+    echo -e "${GREEN}php artisan db:seed --class=VerifiedOrganizationSeeder${NC}\n"
+    exit 1
+fi
+
+# Test 1: Verify API key
+echo -e "${YELLOW}Test 1: Verify API Key${NC}"
+echo -e "Testing with key: ${BLUE}${API_KEY:0:20}...${NC}\n"
+
+VERIFY_RESPONSE=$(curl -s -X GET "$BASE_URL/fraud-detection/verify-key" \
   -H "Content-Type: application/json" \
-  | jq '.'
-echo -e "\n"
+  -H "X-Organization-Key: $API_KEY")
 
-# Test 2: Verify API key (with valid key)
-# Replace this with an actual API key from database
-API_KEY="org_test_key_12345"  # This is a placeholder
+echo "$VERIFY_RESPONSE" | jq '.'
 
-echo -e "${YELLOW}Test 2: Verify API Key (With Key)${NC}"
-curl -X GET "$BASE_URL/fraud-detection/verify-key" \
-  -H "Content-Type: application/json" \
-  -H "X-Organization-Key: $API_KEY" \
-  | jq '.'
-echo -e "\n"
+VERIFIED=$(echo "$VERIFY_RESPONSE" | jq -r '.verified // false')
 
-# Test 3: Analyze certificate (requires PDF file)
-echo -e "${YELLOW}Test 3: Analyze Certificate${NC}"
-echo -e "${RED}Note: This test requires a PDF file. Create a test certificate PDF first.${NC}"
-echo -e "Command to use:${NC}"
-echo -e "${GREEN}"
-cat << 'EOF'
-curl -X POST "$BASE_URL/fraud-detection/analyze" \
-  -H "X-Organization-Key: your_api_key_here" \
-  -F "document=@/path/to/certificate.pdf" \
-  -F "document_type=certificate" \
-  -F "issuer_name=Test University" \
-  -F "holder_name=John Doe" \
-  -F "issue_date=2025-01-15" \
-  | jq '.'
-EOF
-echo -e "${NC}\n"
+if [ "$VERIFIED" == "true" ]; then
+    echo -e "\n${GREEN}✓ API Key verified successfully!${NC}\n"
+    ORG_NAME=$(echo "$VERIFY_RESPONSE" | jq -r '.organization.name')
+    echo -e "Organization: ${BLUE}$ORG_NAME${NC}\n"
+else
+    echo -e "\n${RED}✗ API Key verification failed!${NC}"
+    echo -e "${RED}Please check your API key and try again.${NC}\n"
+    exit 1
+fi
+
+# Test 2: Analyze certificate (requires PDF file)
+echo -e "${YELLOW}Test 2: Analyze Certificate${NC}"
+
+# Check if test PDF exists
+if [ -f "test-certificate.pdf" ]; then
+    echo -e "${GREEN}Found test-certificate.pdf, analyzing...${NC}\n"
+    
+    ANALYSIS_RESPONSE=$(curl -s -X POST "$BASE_URL/fraud-detection/analyze" \
+      -H "X-Organization-Key: $API_KEY" \
+      -F "document=@test-certificate.pdf" \
+      -F "document_type=certificate" \
+      -F "issuer_name=Test University" \
+      -F "holder_name=John Doe" \
+      -F "issue_date=2025-06-15")
+    
+    echo "$ANALYSIS_RESPONSE" | jq '.'
+    
+    SUCCESS=$(echo "$ANALYSIS_RESPONSE" | jq -r '.success // false')
+    
+    if [ "$SUCCESS" == "true" ]; then
+        echo -e "\n${GREEN}✓ Certificate analyzed successfully!${NC}\n"
+        
+        FRAUD_SCORE=$(echo "$ANALYSIS_RESPONSE" | jq -r '.analysis.fraud_score // "N/A"')
+        RISK_LEVEL=$(echo "$ANALYSIS_RESPONSE" | jq -r '.analysis.risk_level // "N/A"')
+        
+        echo -e "Fraud Score: ${BLUE}$FRAUD_SCORE/100${NC}"
+        echo -e "Risk Level: ${BLUE}$RISK_LEVEL${NC}\n"
+    else
+        echo -e "\n${RED}✗ Analysis failed!${NC}"
+        ERROR=$(echo "$ANALYSIS_RESPONSE" | jq -r '.error // "Unknown error"')
+        echo -e "${RED}Error: $ERROR${NC}\n"
+    fi
+else
+    echo -e "${RED}test-certificate.pdf not found!${NC}"
+    echo -e "${YELLOW}Please create a test certificate PDF first.${NC}\n"
+    echo -e "To test with a custom PDF file, run:"
+    echo -e "${GREEN}curl -X POST \"$BASE_URL/fraud-detection/analyze\" \\${NC}"
+    echo -e "${GREEN}  -H \"X-Organization-Key: $API_KEY\" \\${NC}"
+    echo -e "${GREEN}  -F \"document=@your-certificate.pdf\" \\${NC}"
+    echo -e "${GREEN}  -F \"document_type=certificate\" \\${NC}"
+    echo -e "${GREEN}  -F \"issuer_name=University Name\" \\${NC}"
+    echo -e "${GREEN}  -F \"holder_name=Student Name\" \\${NC}"
+    echo -e "${GREEN}  -F \"issue_date=2025-06-15\" | jq '.'${NC}\n"
+fi
 
 # Instructions
 echo -e "${BLUE}========================================${NC}"
