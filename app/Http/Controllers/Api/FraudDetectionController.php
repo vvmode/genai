@@ -37,18 +37,18 @@ class FraudDetectionController extends Controller
             ], 403);
         }
 
-        // Validate request
+        // Validate request - only PDF is required, other fields optional
         $validated = $request->validate([
-            'document' => 'required|file|mimes:pdf|max:10240', // 10MB max
-            'document_type' => 'required|string|in:certificate,diploma,license,degree,transcript',
-            'issuer_name' => 'required|string|max:255',
-            'holder_name' => 'required|string|max:255',
-            'issue_date' => 'required|date',
+            'certificate' => 'required|file|mimes:pdf|max:10240', // 10MB max
+            'document_type' => 'nullable|string|in:certificate,diploma,license,degree,transcript',
+            'issuer_name' => 'nullable|string|max:255',
+            'holder_name' => 'nullable|string|max:255',
+            'issue_date' => 'nullable|date',
         ]);
 
         try {
             // Extract text from PDF
-            $pdfText = $this->extractPdfText($request->file('document'));
+            $pdfText = $this->extractPdfText($request->file('certificate'));
 
             if (empty($pdfText)) {
                 return response()->json([
@@ -75,12 +75,12 @@ class FraudDetectionController extends Controller
                     'id' => $organization->id,
                 ],
                 'analysis' => $fraudAnalysis,
-                'document_info' => [
-                    'type' => $validated['document_type'],
-                    'issuer' => $validated['issuer_name'],
-                    'holder' => $validated['holder_name'],
-                    'issue_date' => $validated['issue_date'],
-                ],
+                'document_info' => array_filter([
+                    'type' => $validated['document_type'] ?? 'unknown',
+                    'issuer' => $validated['issuer_name'] ?? null,
+                    'holder' => $validated['holder_name'] ?? null,
+                    'issue_date' => $validated['issue_date'] ?? null,
+                ]),
                 'analyzed_at' => now()->toIso8601String(),
             ]);
 
@@ -168,16 +168,30 @@ class FraudDetectionController extends Controller
      */
     private function buildFraudDetectionPrompt(string $documentText, array $metadata): string
     {
+        $docType = $metadata['document_type'] ?? 'document';
+        $metadataText = '';
+        
+        if (!empty($metadata['document_type'])) {
+            $metadataText .= "- Type: {$metadata['document_type']}\n";
+        }
+        if (!empty($metadata['issuer_name'])) {
+            $metadataText .= "- Issuer: {$metadata['issuer_name']}\n";
+        }
+        if (!empty($metadata['holder_name'])) {
+            $metadataText .= "- Holder: {$metadata['holder_name']}\n";
+        }
+        if (!empty($metadata['issue_date'])) {
+            $metadataText .= "- Issue Date: {$metadata['issue_date']}\n";
+        }
+        
+        $metadataSection = $metadataText 
+            ? "**DOCUMENT METADATA:**\n{$metadataText}\n" 
+            : "**DOCUMENT METADATA:** Not provided - analyze the extracted text below\n\n";
+        
         return <<<PROMPT
-Analyze this {$metadata['document_type']} for fraud indicators and authenticity issues.
+Analyze this {$docType} for fraud indicators and authenticity issues.
 
-**DOCUMENT METADATA:**
-- Type: {$metadata['document_type']}
-- Issuer: {$metadata['issuer_name']}
-- Holder: {$metadata['holder_name']}
-- Issue Date: {$metadata['issue_date']}
-
-**EXTRACTED DOCUMENT TEXT:**
+{$metadataSection}**EXTRACTED DOCUMENT TEXT:**
 {$documentText}
 
 **ANALYSIS REQUIRED:**
