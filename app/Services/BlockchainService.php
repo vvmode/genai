@@ -399,39 +399,39 @@ class BlockchainService
             $abi = $this->loadContractABI($contractConfig['abi_path']);
             $contract = new Contract($this->web3->provider, $abi);
 
-            // Prepare contract function call with all metadata
+            // Convert pdfHash to bytes32 format (remove 0x prefix if present)
+            $pdfHashHex = $data['pdfHash'];
+            if (strpos($pdfHashHex, '0x') === 0) {
+                $pdfHashHex = substr($pdfHashHex, 2);
+            }
+            // Pad to 32 bytes (64 hex chars) if needed
+            $pdfHashHex = str_pad($pdfHashHex, 64, '0', STR_PAD_RIGHT);
+
+            // Prepare contract function call with parameters matching contract signature
+            // Contract expects: documentId, documentType, documentNumber, documentTitle,
+            // issuedDate, effectiveFrom, effectiveUntil, expiryDate, isPermanent,
+            // issuerName, issuerCountry, issuerRegistrationNumber,
+            // holderFullName, holderIdNumber, holderNationality,
+            // ipfsHash, pdfHash
             $functionData = $contract->at($contractAddress)->getData(
                 'registerDocument',
-                $data['documentType'],
-                $data['documentNumber'],
-                $data['documentTitle'],
-                $data['documentCategory'],
-                $data['documentSubcategory'],
-                $data['documentDescription'],
-                $data['documentLanguage'],
-                $data['documentVersion'],
-                $data['securityLevel'],
-                $data['issuedDate'],
-                $data['expiryDate'],
-                $data['isPermanent'],
-                $data['renewable'],
-                $data['gracePeriodDays'],
-                $data['issuerName'],
-                $data['issuerCountry'],
-                $data['issuerState'],
-                $data['issuerCity'],
-                $data['issuerRegistrationNumber'],
-                $data['issuerContactEmail'],
-                $data['issuerWebsite'],
-                $data['issuerDepartment'],
-                $data['holderFullName'],
-                $data['holderIdNumber'],
-                $data['holderNationality'],
-                $data['holderDateOfBirth'],
-                $data['holderContactEmail'],
-                $data['ipfsHash'],
-                $data['pdfHash'],
-                $data['additionalMetadata']
+                $data['documentNumber'],                    // documentId (use document number as ID)
+                $data['documentType'],                      // documentType
+                $data['documentNumber'],                    // documentNumber
+                $data['documentTitle'],                     // documentTitle
+                (string)$data['issuedDate'],               // issuedDate (uint256)
+                (string)($data['issuedDate']),             // effectiveFrom (use issued date)
+                (string)($data['expiryDate'] ?: 0),        // effectiveUntil
+                (string)($data['expiryDate'] ?: 0),        // expiryDate (uint256)
+                $data['isPermanent'],                       // isPermanent (bool)
+                $data['issuerName'],                        // issuerName
+                $data['issuerCountry'],                     // issuerCountry
+                $data['issuerRegistrationNumber'] ?: '',    // issuerRegistrationNumber
+                $data['holderFullName'],                    // holderFullName
+                $data['holderIdNumber'] ?: '',              // holderIdNumber
+                $data['holderNationality'] ?: '',           // holderNationality
+                $data['ipfsHash'] ?: '',                    // ipfsHash (empty string if not using IPFS)
+                '0x' . $pdfHashHex                          // pdfHash (bytes32)
             );
 
             // Get gas price
@@ -462,6 +462,7 @@ class BlockchainService
         } catch (Exception $e) {
             Log::error('Failed to register document V2', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'document_number' => $data['documentNumber'] ?? 'unknown'
             ]);
             
