@@ -10,7 +10,6 @@ use Web3\Utils;
 use phpseclib3\Math\BigInteger;
 use Elliptic\EC;
 use kornrunner\Keccak;
-use kornrunner\Ethereum\Transaction;
 
 class BlockchainService
 {
@@ -291,28 +290,26 @@ class BlockchainService
         $nonce = $this->getNonce($this->walletAddress);
         $chainId = config('blockchain.network.chain_id');
 
-        // Prepare transaction parameters for signing
-        $tx = new Transaction([
+        // Build transaction array for RLP encoding
+        $transaction = [
             'nonce' => '0x' . dechex($nonce),
-            'from' => $txParams['from'],
-            'to' => $txParams['to'],
-            'gas' => $txParams['gas'],
             'gasPrice' => $txParams['gasPrice'],
-            'data' => $txParams['data'],
-            'chainId' => $chainId,
+            'gas' => $txParams['gas'],
+            'to' => $txParams['to'],
             'value' => $txParams['value'] ?? '0x0',
-        ]);
+            'data' => $txParams['data'],
+        ];
 
-        // Sign transaction with private key
-        $privateKey = str_replace('0x', '', $this->privateKey);
-        $signedTx = '0x' . $tx->sign($privateKey);
-
-        Log::info('Sending signed transaction', [
+        Log::info('Preparing transaction', [
             'from' => $this->walletAddress,
             'to' => $txParams['to'],
             'nonce' => $nonce,
             'gas' => $txParams['gas'],
+            'chainId' => $chainId,
         ]);
+
+        // Sign and send the transaction
+        $signedTx = $this->signTransaction($transaction, $chainId);
 
         // Send raw signed transaction
         $txHash = null;
@@ -328,6 +325,117 @@ class BlockchainService
         }
 
         return $txHash;
+    }
+
+    /**
+     * Sign an Ethereum transaction
+     *
+     * @param array $transaction Transaction data
+     * @param int $chainId Chain ID for EIP-155
+     * @return string Signed transaction hex string
+     */
+    private function signTransaction(array $transaction, int $chainId): string
+    {
+        // Prepare transaction for signing (EIP-155)
+        $fields = [
+            $this->hexToBytes($transaction['nonce']),
+            $this->hexToBytes($transaction['gasPrice']),
+            $this->hexToBytes($transaction['gas']),
+            hex2bin(substr($transaction['to'], 2)),
+            $this->hexToBytes($transaction['value']),
+            hex2bin(substr($transaction['data'], 2)),
+            pack('C', $chainId), // v
+            '', // r
+            '', // s
+        ];
+
+        // RLP encode
+        $encodedTx = $this->rlpEncode($fields);
+        
+        // Hash the transaction
+        $txHash = Keccak::hash($encodedTx, 256, true);
+
+        // Sign with private key
+        $privateKey = str_replace('0x', '', $this->privateKey);
+        $secp256k1 = new EC('secp256k1');
+        $key = $secp256k1->keyFromPrivate($privateKey, 'hex');
+        $signature = $key->sign($txHash, ['canonical' => true]);
+
+        // Calculate v value (EIP-155)
+        $v = $signature->recoveryParam + $chainId * 2 + 35;
+
+        // Update fields with signature
+        $fields[6] = pack('C', $v);
+        $fields[7] = hex2bin(str_pad($signature->r->toString(16), 64, '0', STR_PAD_LEFT));
+        $fields[8] = hex2bin(str_pad($signature->s->toString(16), 64, '0', STR_PAD_LEFT));
+
+        // RLP encode again with signature
+        $signedTx = $this->rlpEncode($fields);
+
+        return '0x' . bin2hex($signedTx);
+    }
+
+    /**
+     * RLP encode data
+     *
+     * @param array $input Data to encode
+     * @return string Encoded data
+     */
+    private function rlpEncode($input): string
+    {
+        if (is_string($input)) {
+            if (strlen($input) == 1 && ord($input) < 0x80) {
+                return $input;
+            }
+            return $this->encodeLength(strlen($input), 0x80) . $input;
+        } elseif (is_array($input)) {
+            $output = '';
+            foreach ($input as $val) {
+                $output .= $this->rlpEncode($val);
+            }
+            return $this->encodeLength(strlen($output), 0xc0) . $output;
+        }
+        return '';
+    }
+
+    /**
+     * Encode length for RLP
+     *
+     * @param int $length Length to encode
+     * @param int $offset Offset
+     * @return string Encoded length
+     */
+    private function encodeLength(int $length, int $offset): string
+    {
+        if ($length < 56) {
+            return chr($length + $offset);
+        } elseif ($length < 256 ** 8) {
+            $lengthHex = dechex($length);
+            if (strlen($lengthHex) % 2) {
+                $lengthHex = '0' . $lengthHex;
+            }
+            $lengthBinary = hex2bin($lengthHex);
+            return chr(strlen($lengthBinary) + $offset + 55) . $lengthBinary;
+        }
+        throw new Exception('Input too long');
+    }
+
+    /**
+     * Convert hex string to bytes
+     *
+     * @param string $hex Hex string
+     * @return string Binary string
+     */
+    private function hexToBytes(string $hex): string
+    {
+        $hex = str_replace('0x', '', $hex);
+        if ($hex === '0' || $hex === '') {
+            return '';
+        }
+        if (strlen($hex) % 2) {
+            $hex = '0' . $hex;
+        }
+        return hex2bin($hex);
     }
 
     /**
