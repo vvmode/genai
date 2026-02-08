@@ -8,6 +8,8 @@ use Web3\Web3;
 use Web3\Contract;
 use Web3\Utils;
 use phpseclib3\Math\BigInteger;
+use Elliptic\EC;
+use kornrunner\Keccak;
 
 class BlockchainService
 {
@@ -24,8 +26,22 @@ class BlockchainService
         }
 
         $this->web3 = new Web3($rpcUrl);
-        $this->walletAddress = config('blockchain.wallet.address');
         $this->privateKey = config('blockchain.wallet.private_key');
+        
+        // Get wallet address from config, or derive from private key
+        $configAddress = config('blockchain.wallet.address');
+        if (!empty($configAddress)) {
+            $this->walletAddress = $configAddress;
+        } else if (!empty($this->privateKey)) {
+            // Derive address from private key
+            $this->walletAddress = $this->deriveAddressFromPrivateKey($this->privateKey);
+            Log::info('Derived wallet address from private key', [
+                'address' => $this->walletAddress
+            ]);
+        } else {
+            throw new Exception('Neither wallet address nor private key configured');
+        }
+        
         $this->contractConfig = config('blockchain.contracts.document_registry');
     }
 
@@ -340,6 +356,38 @@ class BlockchainService
 
         // Otherwise assume the file is already just the ABI array
         return $content;
+    }
+
+    /**
+     * Derive Ethereum address from private key
+     *
+     * @param string $privateKey Private key with or without 0x prefix
+     * @return string Ethereum address with 0x prefix
+     */
+    private function deriveAddressFromPrivateKey(string $privateKey): string
+    {
+        // Remove 0x prefix if present
+        $privateKey = str_replace('0x', '', $privateKey);
+        
+        // Use simplito/elliptic-php for secp256k1 operations
+        try {
+            $secp256k1 = new \Elliptic\EC('secp256k1');
+            $keyPair = $secp256k1->keyFromPrivate($privateKey, 'hex');
+            $publicKey = $keyPair->getPublic(false, 'hex');
+            
+            // Remove '04' prefix from uncompressed public key (first byte)
+            $publicKey = substr($publicKey, 2);
+            
+            // Hash public key with keccak256
+            $hash = \kornrunner\Keccak::hash(hex2bin($publicKey), 256);
+            
+            // Take last 20 bytes (40 hex chars) as address
+            $address = '0x' . substr($hash, -40);
+            
+            return $address;
+        } catch (Exception $e) {
+            throw new Exception('Failed to derive address from private key: ' . $e->getMessage());
+        }
     }
 
     /**
