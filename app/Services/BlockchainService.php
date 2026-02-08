@@ -10,6 +10,7 @@ use Web3\Utils;
 use phpseclib3\Math\BigInteger;
 use Elliptic\EC;
 use kornrunner\Keccak;
+use kornrunner\Ethereum\Transaction;
 
 class BlockchainService
 {
@@ -288,15 +289,34 @@ class BlockchainService
     {
         // Get nonce
         $nonce = $this->getNonce($this->walletAddress);
-        $txParams['nonce'] = '0x' . dechex($nonce);
-        $txParams['chainId'] = config('blockchain.network.chain_id');
+        $chainId = config('blockchain.network.chain_id');
 
-        // Sign transaction using private key
-        // Note: You'll need ethereum-tx library for proper signing
-        // This is a simplified version
-        
+        // Prepare transaction parameters for signing
+        $tx = new Transaction([
+            'nonce' => '0x' . dechex($nonce),
+            'from' => $txParams['from'],
+            'to' => $txParams['to'],
+            'gas' => $txParams['gas'],
+            'gasPrice' => $txParams['gasPrice'],
+            'data' => $txParams['data'],
+            'chainId' => $chainId,
+            'value' => $txParams['value'] ?? '0x0',
+        ]);
+
+        // Sign transaction with private key
+        $privateKey = str_replace('0x', '', $this->privateKey);
+        $signedTx = '0x' . $tx->sign($privateKey);
+
+        Log::info('Sending signed transaction', [
+            'from' => $this->walletAddress,
+            'to' => $txParams['to'],
+            'nonce' => $nonce,
+            'gas' => $txParams['gas'],
+        ]);
+
+        // Send raw signed transaction
         $txHash = null;
-        $this->web3->eth->sendTransaction($txParams, function ($err, $hash) use (&$txHash) {
+        $this->web3->eth->sendRawTransaction($signedTx, function ($err, $hash) use (&$txHash) {
             if ($err !== null) {
                 throw new Exception('Transaction failed: ' . $err->getMessage());
             }
