@@ -12,6 +12,7 @@
             "enabled": true,
             "runs": 200
           },
+          "viaIR": true,
           "outputSelection": {
             "*": {
               "*": [
@@ -34,6 +35,42 @@
       ],
       "artifacts": [
         "DocumentRegistry"
+      ]
+    },
+    "H:\\GenAI\\blockchain-app\\contracts\\DocumentRegistryV2.sol": {
+      "lastModificationDate": 1770520013245,
+      "contentHash": "cdf7b21f4f64062afe0b50ddd8c8c29e",
+      "sourceName": "contracts/DocumentRegistryV2.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "DocumentRegistryV2"
       ]
     }
   }

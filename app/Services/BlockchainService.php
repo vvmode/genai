@@ -344,9 +344,9 @@ class BlockchainService
             hex2bin(substr($transaction['to'], 2)),
             $this->hexToBytes($transaction['value']),
             hex2bin(substr($transaction['data'], 2)),
-            pack('C', $chainId), // v
-            '', // r
-            '', // s
+            $this->hexToBytes('0x' . dechex($chainId)), // chain ID as bytes
+            '', // r (empty for unsigned)
+            '', // s (empty for unsigned)
         ];
 
         // RLP encode
@@ -365,7 +365,7 @@ class BlockchainService
         $v = $signature->recoveryParam + $chainId * 2 + 35;
 
         // Update fields with signature
-        $fields[6] = pack('C', $v);
+        $fields[6] = $this->hexToBytes('0x' . dechex($v)); // v as bytes
         $fields[7] = hex2bin(str_pad($signature->r->toString(16), 64, '0', STR_PAD_LEFT));
         $fields[8] = hex2bin(str_pad($signature->s->toString(16), 64, '0', STR_PAD_LEFT));
 
