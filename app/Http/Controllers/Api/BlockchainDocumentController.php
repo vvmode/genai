@@ -52,19 +52,11 @@ class BlockchainDocumentController extends Controller
      */
     protected function register(Request $request)
     {
-        // Validate request
+        // Validate request - Simple 3-field format
         $validator = Validator::make($request->all(), [
-            'document' => 'required|array',
-            'document.type' => 'required|string',
-            'document.number' => 'required|string',
-            'document.title' => 'required|string',
-            'validity' => 'required|array',
-            'validity.issued_date' => 'required|date',
-            'issuer' => 'required|array',
-            'issuer.name' => 'required|string',
-            'issuer.country' => 'required|string',
-            'holder' => 'required|array',
-            'holder.full_name' => 'required|string',
+            'document_uuid' => 'required|string|max:255',
+            'file_hash' => 'required|string|max:255',
+            'metadata_hash' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -76,68 +68,68 @@ class BlockchainDocumentController extends Controller
         }
 
         $data = $request->all();
-        $document = $data['document'];
-        $validity = $data['validity'];
-        $issuer = $data['issuer'];
-        $holder = $data['holder'];
-        $metadata = $data['metadata'] ?? [];
-
-        // Generate document hash from PDF if provided
-        $pdfHash = '';
-        if (isset($document['pdf_base64'])) {
-            $pdfData = base64_decode($document['pdf_base64']);
-            $pdfHash = '0x' . hash('sha256', $pdfData);
-        } else {
-            // If no PDF provided, hash document metadata as placeholder
-            // (contract requires non-zero pdfHash)
-            $hashInput = $document['number'] . $document['title'] . $document['type'];
-            $pdfHash = '0x' . hash('sha256', $hashInput);
+        
+        // Add 0x prefix if not present
+        $fileHash = $data['file_hash'];
+        if (!str_starts_with($fileHash, '0x')) {
+            $fileHash = '0x' . $fileHash;
         }
+        
+        $metadataHash = $data['metadata_hash'];
+        if (!str_starts_with($metadataHash, '0x')) {
+            $metadataHash = '0x' . $metadataHash;
+        }
+        
+        $pdfHash = $fileHash;
 
-        // Prepare blockchain data structure
+        
+        // Prepare blockchain data structure with minimal required fields
         $blockchainData = [
             // Document info
-            'documentType' => $document['type'],
-            'documentNumber' => $document['number'],
-            'documentTitle' => $document['title'],
-            'documentCategory' => $document['category'] ?? '',
-            'documentSubcategory' => $document['subcategory'] ?? '',
-            'documentDescription' => $document['description'] ?? '',
-            'documentLanguage' => $document['language'] ?? 'en',
-            'documentVersion' => $document['version'] ?? '1.0',
-            'securityLevel' => $document['security_level'] ?? 'standard',
+            'documentType' => 'generic',
+            'documentNumber' => $data['document_uuid'],
+            'documentTitle' => $data['document_uuid'],
+            'documentCategory' => '',
+            'documentSubcategory' => '',
+            'documentDescription' => '',
+            'documentLanguage' => 'en',
+            'documentVersion' => '1.0',
+            'securityLevel' => 'standard',
             
             // Validity info
-            'issuedDate' => strtotime($validity['issued_date']),
-            'expiryDate' => isset($validity['expiry_date']) ? strtotime($validity['expiry_date']) : 0,
-            'isPermanent' => $validity['is_permanent'] ?? false,
-            'renewable' => $validity['renewable'] ?? false,
-            'gracePeriodDays' => $validity['grace_period_days'] ?? 0,
+            'issuedDate' => time(),
+            'expiryDate' => 0,
+            'isPermanent' => true,
+            'renewable' => false,
+            'gracePeriodDays' => 0,
             
             // Issuer info
-            'issuerName' => $issuer['name'],
-            'issuerCountry' => $issuer['country'],
-            'issuerState' => $issuer['state'] ?? '',
-            'issuerCity' => $issuer['city'] ?? '',
-            'issuerRegistrationNumber' => $issuer['registration_number'] ?? '',
-            'issuerContactEmail' => $issuer['contact_email'] ?? '',
-            'issuerWebsite' => $issuer['website'] ?? '',
-            'issuerDepartment' => $issuer['department'] ?? '',
+            'issuerName' => 'System',
+            'issuerCountry' => 'N/A',
+            'issuerState' => '',
+            'issuerCity' => '',
+            'issuerRegistrationNumber' => '',
+            'issuerContactEmail' => '',
+            'issuerWebsite' => '',
+            'issuerDepartment' => '',
             
             // Holder info
-            'holderFullName' => $holder['full_name'],
-            'holderIdNumber' => $holder['id_number'] ?? '',
-            'holderNationality' => $holder['nationality'] ?? '',
-            'holderDateOfBirth' => isset($holder['date_of_birth']) ? strtotime($holder['date_of_birth']) : 0,
-            'holderContactEmail' => $holder['contact_email'] ?? '',
+            'holderFullName' => 'N/A',
+            'holderIdNumber' => '',
+            'holderNationality' => '',
+            'holderDateOfBirth' => 0,
+            'holderContactEmail' => '',
             
             // PDF hash and metadata
-            'ipfsHash' => '', // Not using IPFS for direct blockchain storage
+            'ipfsHash' => '',
             'pdfHash' => $pdfHash,
-            'additionalMetadata' => json_encode($metadata),
+            'additionalMetadata' => json_encode([
+                'document_uuid' => $data['document_uuid'],
+                'metadata_hash' => $metadataHash
+            ]),
         ];
 
-        Log::info('Registering document to blockchain', ['document_id' => $document['number']]);
+        Log::info('Registering document to blockchain', ['document_uuid' => $data['document_uuid']]);
 
         // Write to blockchain
         $result = $this->blockchain->registerDocumentV2($blockchainData);
@@ -155,10 +147,9 @@ class BlockchainDocumentController extends Controller
             'action' => 'registered',
             'message' => 'Document registered successfully on blockchain',
             'data' => [
-                'document_id' => $document['number'],
-                'document_type' => $document['type'],
-                'document_title' => $document['title'],
-                'pdf_hash' => $pdfHash,
+                'document_uuid' => $data['document_uuid'],
+                'file_hash' => $fileHash,
+                'metadata_hash' => $metadataHash,
                 'blockchain' => [
                     'transaction_hash' => $result['transaction_hash'],
                     'contract_address' => $result['contract_address'] ?? config('blockchain.document_registry_v2_address'),
@@ -166,22 +157,10 @@ class BlockchainDocumentController extends Controller
                     'network' => 'sepolia',
                     'status' => 'pending'
                 ],
-                'issuer' => [
-                    'name' => $issuer['name'],
-                    'country' => $issuer['country']
-                ],
-                'holder' => [
-                    'name' => $holder['full_name']
-                ],
-                'validity' => [
-                    'issued_date' => $validity['issued_date'],
-                    'expiry_date' => $validity['expiry_date'] ?? null,
-                    'is_permanent' => $validity['is_permanent'] ?? false
-                ],
                 'registered_at' => now()->toIso8601String()
             ],
             'storage_model' => 'direct_blockchain',
-            'note' => 'All metadata stored directly on blockchain. Check transaction status on Etherscan.'
+            'note' => 'Hashes stored directly on blockchain. Check transaction status on Etherscan.'
         ], 201);
     }
 
