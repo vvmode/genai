@@ -275,10 +275,16 @@ class BlockchainService
             $gasPrice = Utils::toWei($gasPriceGwei, 'gwei');
         }
 
-        // Increase gas price by 20% to ensure transaction goes through
+        // Increase gas price by 50% to ensure transaction goes through
         // This helps avoid "replacement transaction underpriced" errors
         $gasPriceValue = hexdec($gasPrice->toHex());
-        $increasedGasPrice = (int)($gasPriceValue * 1.2);
+        $increasedGasPrice = (int)($gasPriceValue * 1.5);
+
+        Log::info('Gas price calculated', [
+            'original' => $gasPriceValue,
+            'increased' => $increasedGasPrice,
+            'increase_percent' => 50
+        ]);
 
         return '0x' . dechex($increasedGasPrice);
     }
@@ -452,19 +458,48 @@ class BlockchainService
      */
     private function getNonce(string $address): int
     {
-        $nonce = 0;
+        $pendingNonce = 0;
+        $latestNonce = 0;
         
-        // Use 'latest' to get confirmed transaction count, avoiding pending conflicts
-        $this->web3->eth->getTransactionCount($address, 'latest', function ($err, $count) use (&$nonce) {
+        // Get pending nonce
+        $this->web3->eth->getTransactionCount($address, 'pending', function ($err, $count) use (&$pendingNonce) {
             if ($err === null) {
-                $nonce = hexdec($count->toString());
+                $pendingNonce = hexdec($count->toString());
             }
         });
 
-        // Add small random delay to prevent concurrent requests from getting same nonce
-        usleep(rand(100000, 300000)); // 100-300ms delay
+        // Get latest (confirmed) nonce
+        $this->web3->eth->getTransactionCount($address, 'latest', function ($err, $count) use (&$latestNonce) {
+            if ($err === null) {
+                $latestNonce = hexdec($count->toString());
+            }
+        });
 
-        return $nonce;
+        // If there are pending transactions, wait and retry
+        if ($pendingNonce > $latestNonce) {
+            Log::warning('Pending transactions detected, waiting...', [
+                'pending' => $pendingNonce,
+                'latest' => $latestNonce,
+                'address' => $address
+            ]);
+            
+            // Wait 3 seconds for pending transactions to clear
+            sleep(3);
+            
+            // Get latest nonce again
+            $this->web3->eth->getTransactionCount($address, 'latest', function ($err, $count) use (&$latestNonce) {
+                if ($err === null) {
+                    $latestNonce = hexdec($count->toString());
+                }
+            });
+        }
+
+        // Add small random delay to prevent concurrent requests
+        usleep(rand(100000, 200000)); // 100-200ms
+
+        Log::info('Using nonce', ['nonce' => $latestNonce, 'address' => $address]);
+        
+        return $latestNonce;
     }
 
     /**
