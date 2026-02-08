@@ -332,6 +332,13 @@ class BlockchainService
             throw new Exception('Invalid ABI JSON format');
         }
 
+        // Check if this is a Hardhat compilation artifact (has 'abi' field)
+        // If so, extract just the ABI array
+        if (isset($json['abi']) && is_array($json['abi'])) {
+            return json_encode($json['abi']);
+        }
+
+        // Otherwise assume the file is already just the ABI array
         return $content;
     }
 
