@@ -352,14 +352,15 @@ class BlockchainService
         // RLP encode
         $encodedTx = $this->rlpEncode($fields);
         
-        // Hash the transaction
-        $txHash = Keccak::hash($encodedTx, 256, true);
+        // Hash the transaction (returns binary, convert to hex for signing)
+        $txHashBinary = Keccak::hash($encodedTx, 256, true);
+        $txHashHex = bin2hex($txHashBinary);
 
         // Sign with private key
         $privateKey = str_replace('0x', '', $this->privateKey);
         $secp256k1 = new EC('secp256k1');
         $key = $secp256k1->keyFromPrivate($privateKey, 'hex');
-        $signature = $key->sign($txHash, ['canonical' => true]);
+        $signature = $key->sign($txHashHex, ['canonical' => true]);
 
         // Calculate v value (EIP-155)
         $v = $signature->recoveryParam + $chainId * 2 + 35;
