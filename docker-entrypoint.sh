@@ -50,18 +50,17 @@ fi
 export BLOCKCHAIN_RPC_URL="$RPC_URL"
 export BLOCKCHAIN_WALLET_PRIVATE_KEY="$PRIVATE_KEY"
 
-# Deploy smart contract if not already deployed
+# Deploy V1 smart contract if not already deployed
 if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
-    echo "📄 Attempting smart contract deployment..."
+    echo "📄 Attempting V1 smart contract deployment..."
     
     # Compile contracts
     echo "⚙️  Compiling smart contracts..."
     npx hardhat compile || echo "⚠️  Compilation failed"
     
     # Deploy to network with timeout and error handling
-    echo "🌐 Deploying to Sepolia..."
+    echo "🌐 Deploying V1 to Sepolia..."
     
-    # Deploy V1 Contract (DocumentRegistry)
     if timeout 60 npx hardhat run scripts/deploy.js --network sepolia 2>&1 | tee /tmp/deploy.log; then
         # Extract contract address from deployment output
         CONTRACT_ADDRESS=$(grep -oP "DocumentRegistry deployed to: \K0x[a-fA-F0-9]{40}" /tmp/deploy.log | head -1)
@@ -88,11 +87,29 @@ if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
         echo "❌ V1 Deployment failed or timed out"
         echo "Continuing without blockchain contract..."
     fi
-    
-    # Deploy V2 Contract (DocumentRegistryV2)
+else
+    if [ -n "$CONTRACT_ADDR" ]; then
+        echo "✅ Using existing V1 contract: $CONTRACT_ADDR"
+    else
+        echo "⚠️  Blockchain not configured - skipping V1 deployment"
+        [ -z "$RPC_URL" ] && echo "   Add SEPOLIA_RPC_URL or BLOCKCHAIN_RPC_URL to Railway"
+        [ -z "$PRIVATE_KEY" ] && echo "   Add PRIVATE_KEY or BLOCKCHAIN_WALLET_PRIVATE_KEY to Railway"
+    fi
+fi
+
+# Deploy V2 Contract (DocumentRegistryV2) - independent of V1
+CONTRACT_V2_ADDR="${DOCUMENT_REGISTRY_V2_ADDRESS}"
+if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_V2_ADDR" ]; then
     echo ""
     echo "📄 Deploying V2 Contract (DocumentRegistryV2)..."
-    if timeout 60 npx hardhat run scripts/deploy-v2.js --network sepolia 2>&1 | tee /tmp/deploy-v2.log; then
+    
+    # Ensure compilation is done
+    if [ ! -d "artifacts/contracts/DocumentRegistryV2.sol" ]; then
+        echo "⚙️  Compiling contracts..."
+        npx hardhat compile || echo "⚠️  Compilation failed"
+    fi
+    
+    if timeout 90 npx hardhat run scripts/deploy-v2.js --network sepolia 2>&1 | tee /tmp/deploy-v2.log; then
         # Extract V2 contract address from deployment output
         CONTRACT_V2_ADDRESS=$(grep -oP "DocumentRegistryV2 deployed to: \K0x[a-fA-F0-9]{40}" /tmp/deploy-v2.log | head -1)
         
@@ -117,13 +134,13 @@ if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
     else
         echo "❌ V2 Deployment failed or timed out"
         echo "Continuing without V2 contract..."
-        echo "You can deploy manually with: npm run deploy:sepolia"
+        echo "You can deploy manually with: npx hardhat run scripts/deploy-v2.js --network sepolia"
     fi
 else
-    if [ -n "$CONTRACT_ADDR" ]; then
-        echo "✅ Using existing contract: $CONTRACT_ADDR"
+    if [ -n "$CONTRACT_V2_ADDR" ]; then
+        echo "✅ Using existing V2 contract: $CONTRACT_V2_ADDR"
     else
-        echo "⚠️  Blockchain not configured - skipping deployment"
+        echo "⚠️  V2 contract not configured - skipping V2 deployment"
         [ -z "$RPC_URL" ] && echo "   Add SEPOLIA_RPC_URL or BLOCKCHAIN_RPC_URL to Railway"
         [ -z "$PRIVATE_KEY" ] && echo "   Add PRIVATE_KEY or BLOCKCHAIN_WALLET_PRIVATE_KEY to Railway"
     fi
