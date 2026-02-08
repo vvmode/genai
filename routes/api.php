@@ -57,3 +57,12 @@ Route::prefix('documents')->group(function () {
         Route::get('/{uuid}/status', [DocumentController::class, 'checkTransactionStatus']);
     });
 });
+
+// Fraud Detection Routes (Organization API Key Required)
+Route::prefix('fraud-detection')->group(function () {
+    // Verify organization API key
+    Route::get('/verify-key', [App\Http\Controllers\Api\FraudDetectionController::class, 'verifyApiKey']);
+    
+    // Analyze certificate for fraud indicators
+    Route::post('/analyze', [App\Http\Controllers\Api\FraudDetectionController::class, 'analyzeCertificate']);
+});
