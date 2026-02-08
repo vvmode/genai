@@ -61,6 +61,7 @@ if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
     # Deploy to network with timeout and error handling
     echo "🌐 Deploying to Sepolia..."
     
+    # Deploy V1 Contract (DocumentRegistry)
     if timeout 60 npx hardhat run scripts/deploy.js --network sepolia 2>&1 | tee /tmp/deploy.log; then
         # Extract contract address from deployment output
         CONTRACT_ADDRESS=$(grep -oP "DocumentRegistry deployed to: \K0x[a-fA-F0-9]{40}" /tmp/deploy.log | head -1)
@@ -68,7 +69,7 @@ if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
         if [ -n "$CONTRACT_ADDRESS" ]; then
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "✅ CONTRACT DEPLOYED SUCCESSFULLY!"
+            echo "✅ V1 CONTRACT DEPLOYED SUCCESSFULLY!"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "Contract Address: $CONTRACT_ADDRESS"
             echo ""
@@ -80,12 +81,42 @@ if [ -n "$RPC_URL" ] && [ -n "$PRIVATE_KEY" ] && [ -z "$CONTRACT_ADDR" ]; then
             # Save to a file for reference
             echo "$CONTRACT_ADDRESS" > /app/storage/.contract_address
         else
-            echo "⚠️  Deployment completed but could not extract contract address"
+            echo "⚠️  V1 Deployment completed but could not extract contract address"
             echo "Check deployment logs above"
         fi
     else
-        echo "❌ Deployment failed or timed out"
+        echo "❌ V1 Deployment failed or timed out"
         echo "Continuing without blockchain contract..."
+    fi
+    
+    # Deploy V2 Contract (DocumentRegistryV2)
+    echo ""
+    echo "📄 Deploying V2 Contract (DocumentRegistryV2)..."
+    if timeout 60 npx hardhat run scripts/deploy-v2.js --network sepolia 2>&1 | tee /tmp/deploy-v2.log; then
+        # Extract V2 contract address from deployment output
+        CONTRACT_V2_ADDRESS=$(grep -oP "DocumentRegistryV2 deployed to: \K0x[a-fA-F0-9]{40}" /tmp/deploy-v2.log | head -1)
+        
+        if [ -n "$CONTRACT_V2_ADDRESS" ]; then
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ V2 CONTRACT DEPLOYED SUCCESSFULLY!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Contract Address: $CONTRACT_V2_ADDRESS"
+            echo ""
+            echo "⚠️  Add this to Railway Variables:"
+            echo "DOCUMENT_REGISTRY_V2_ADDRESS=$CONTRACT_V2_ADDRESS"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            
+            # Save to a file for reference
+            echo "$CONTRACT_V2_ADDRESS" > /app/storage/.contract_v2_address
+        else
+            echo "⚠️  V2 Deployment completed but could not extract contract address"
+            echo "Check deployment logs above"
+        fi
+    else
+        echo "❌ V2 Deployment failed or timed out"
+        echo "Continuing without V2 contract..."
         echo "You can deploy manually with: npm run deploy:sepolia"
     fi
 else

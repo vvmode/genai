@@ -1,7 +1,11 @@
 import "@nomicfoundation/hardhat-toolbox";
+import dotenv from "dotenv";
+
+// Load environment variables from .env for local development
+dotenv.config();
 
 // Railway injects environment variables directly
-// No need for dotenv in production
+// No need for dotenv in production (it's already loaded above)
 
 // Get RPC URL from environment with proper fallbacks
 const getRpcUrl = () => {
@@ -38,7 +42,8 @@ export default {
       optimizer: {
         enabled: true,
         runs: 200
-      }
+      },
+      viaIR: true  // Enable IR-based code generation for complex contracts
     }
   },
   networks: {

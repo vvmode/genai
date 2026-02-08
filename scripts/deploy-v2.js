@@ -1,17 +1,18 @@
-const { ethers } = require("hardhat");
+import hre from "hardhat";
+import fs from "fs";
 
 async function main() {
   console.log("🚀 Deploying DocumentRegistryV2...\n");
 
   // Get deployer account
-  const [deployer] = await ethers.getSigners();
+  const [deployer] = await hre.ethers.getSigners();
   console.log("Deploying contracts with account:", deployer.address);
   
-  const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("Account balance:", ethers.formatEther(balance), "ETH\n");
+  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  console.log("Account balance:", hre.ethers.formatEther(balance), "ETH\n");
 
   // Deploy contract
-  const DocumentRegistryV2 = await ethers.getContractFactory("DocumentRegistryV2");
+  const DocumentRegistryV2 = await hre.ethers.getContractFactory("DocumentRegistryV2");
   const contract = await DocumentRegistryV2.deploy();
   
   await contract.waitForDeployment();
@@ -29,7 +30,6 @@ async function main() {
     version: "2.0"
   };
   
-  const fs = require('fs');
   fs.writeFileSync(
     'deployment-v2.json',
     JSON.stringify(deploymentInfo, null, 2)
