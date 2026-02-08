@@ -275,7 +275,12 @@ class BlockchainService
             $gasPrice = Utils::toWei($gasPriceGwei, 'gwei');
         }
 
-        return '0x' . $gasPrice->toHex();
+        // Increase gas price by 20% to ensure transaction goes through
+        // This helps avoid "replacement transaction underpriced" errors
+        $gasPriceValue = hexdec($gasPrice->toHex());
+        $increasedGasPrice = (int)($gasPriceValue * 1.2);
+
+        return '0x' . dechex($increasedGasPrice);
     }
 
     /**
@@ -449,11 +454,15 @@ class BlockchainService
     {
         $nonce = 0;
         
-        $this->web3->eth->getTransactionCount($address, 'pending', function ($err, $count) use (&$nonce) {
+        // Use 'latest' to get confirmed transaction count, avoiding pending conflicts
+        $this->web3->eth->getTransactionCount($address, 'latest', function ($err, $count) use (&$nonce) {
             if ($err === null) {
                 $nonce = hexdec($count->toString());
             }
         });
+
+        // Add small random delay to prevent concurrent requests from getting same nonce
+        usleep(rand(100000, 300000)); // 100-300ms delay
 
         return $nonce;
     }
